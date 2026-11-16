@@ -26,66 +26,34 @@ IAM Role por repositório criada no `fiapx-infra/bootstrap`: não existe access 
 | `fiapx-video-api` | pint, phpstan (nível 6+), phpunit (cobertura ≥ 80%, MySQL como service container), behat (SAGA), Sonar, build + Trivy | push no ECR → Job `migrate` → `kustomize edit set image` → `kubectl apply -k` → `rollout status` → smoke test |
 | `fiapx-video-processor` | pint, phpstan, phpunit (inclui integração com `ffmpeg` real e um vídeo de 3 s), Sonar, build + Trivy | push no ECR → `kustomize edit set image` → `kubectl apply -k` → `rollout status` |
 
-### Aplicações no EKS (`fiapx-video-api` e `fiapx-video-processor`)
+Os quatro tipos de pipeline, lado a lado:
 
 ```mermaid
-flowchart LR
-  PR["Pull request"] --> L["Lint<br/>pint, phpstan"]
-  L --> T["Testes<br/>phpunit, behat"]
-  T --> S["SonarCloud<br/>Quality Gate"]
-  S --> B["docker build<br/>+ Trivy"]
-  B --> M{"merge na main?"}
-  M -- "não" --> FIM["checks no PR"]
-  M -- "sim" --> OIDC["OIDC → role do repo"]
-  OIDC --> ECR["push no ECR<br/>tag = SHA"]
-  ECR --> MIG["Job migrate<br/>(só video-api)"]
-  MIG --> K["kustomize edit set image<br/>kubectl apply -k"]
-  K --> RS["rollout status"]
-  RS --> SM["smoke test<br/>/api/health/ready"]
+flowchart TB
+  subgraph EKS["Aplicações no EKS: fiapx-video-api e fiapx-video-processor"]
+    direction LR
+    E1["PR"] --> E2["pint, phpstan"] --> E3["phpunit, behat"] --> E4["SonarCloud"] --> E5["docker build<br/>+ Trivy"] --> E6["merge na main"] --> E7["push no ECR<br/>tag = SHA"] --> E8["Job migrate<br/>só video-api"] --> E9["kustomize edit set image<br/>kubectl apply -k"] --> E10["rollout status<br/>+ smoke test"]
+  end
+  subgraph LAMBDA["Lambdas com Terraform: fiapx-auth e fiapx-notification"]
+    direction LR
+    L1["PR"] --> L2["eslint"] --> L3["jest ≥ 80%"] --> L4["SonarCloud"] --> L5["terraform plan<br/>comentado"] --> L6["merge na main"] --> L7["build do zip"] --> L8["terraform apply<br/>env prod"] --> L9["smoke test"]
+  end
+  subgraph INFRA["Infraestrutura: fiapx-infra"]
+    direction LR
+    I1["PR"] --> I2["fmt -check<br/>validate"] --> I3["tflint + checkov"] --> I4["plan<br/>comentado"] --> I5["merge na main"] --> I6["apply<br/>env prod"] --> I7["parâmetros SSM"]
+  end
+  subgraph WEB["Front-end: fiapx-web"]
+    direction LR
+    W1["PR"] --> W2["eslint"] --> W3["vitest ≥ 80%"] --> W4["SonarCloud"] --> W5["npm run build"] --> W6["merge na main"] --> W7["s3 sync"] --> W8["invalidação<br/>CloudFront"] --> W9["Playwright smoke"]
+  end
+  EKS ~~~ LAMBDA ~~~ INFRA ~~~ WEB
 ```
 
-### Lambdas com Terraform (`fiapx-auth` e `fiapx-notification`)
-
-```mermaid
-flowchart LR
-  PR["Pull request"] --> L["eslint"]
-  L --> T["jest<br/>cobertura ≥ 80%"]
-  T --> S["SonarCloud"]
-  S --> P["terraform plan<br/>comentado no PR"]
-  P --> M{"merge na main?"}
-  M -- "sim" --> Z["build do zip"]
-  Z --> A["terraform apply<br/>environment prod"]
-  A --> SM["smoke test"]
-```
+Nos PRs, a pipeline para no merge: só os checks rodam. O deploy começa no merge na `main`, com a
+role OIDC do repositório.
 
 Smoke tests: no `fiapx-auth`, cadastro e login de um usuário de teste; no `fiapx-notification`, envio
 para `success@simulator.amazonses.com` e conferência do item `SENT` no DynamoDB.
-
-### Infraestrutura (`fiapx-infra`)
-
-```mermaid
-flowchart LR
-  PR["Pull request"] --> F["terraform fmt -check<br/>validate"]
-  F --> TL["tflint + checkov"]
-  TL --> P["plan<br/>comentado no PR"]
-  P --> M{"merge na main?"}
-  M -- "sim" --> A["apply<br/>environment prod"]
-  A --> SSM["parâmetros SSM<br/>/fiapx/prod/..."]
-```
-
-### Front-end (`fiapx-web`)
-
-```mermaid
-flowchart LR
-  PR["Pull request"] --> L["eslint"]
-  L --> T["vitest<br/>cobertura ≥ 80%"]
-  T --> S["SonarCloud"]
-  S --> B["npm run build"]
-  B --> M{"merge na main?"}
-  M -- "sim" --> SY["aws s3 sync dist/<br/>bucket /web/bucket"]
-  SY --> INV["invalidação<br/>do CloudFront"]
-  INV --> PW["Playwright smoke<br/>na URL pública"]
-```
 
 ## Ordem entre repositórios (primeira subida)
 
@@ -99,6 +67,7 @@ flowchart TD
   I --> PROC["fiapx-video-processor<br/>deploy + ScaledObject"]
   I --> NOTIF["fiapx-notification<br/>SQS + lambda + DynamoDB<br/>publica URL da fila no SSM"]
   NOTIF --> API
+  NOTIF --> AUTH
   I --> WEB["fiapx-web<br/>build + s3 sync + invalidação"]
   API --> E2E["smoke test ponta a ponta<br/>register → login → upload → COMPLETED → download"]
   PROC --> E2E
@@ -111,7 +80,9 @@ Por que essa ordem:
 1. O `bootstrap` cria o bucket do state e as roles OIDC. Sem ele nenhuma pipeline autentica na AWS.
 2. O `fiapx-infra` publica no SSM tudo o que os outros repositórios precisam.
 3. Os databases precisam existir antes das migrations do `fiapx-auth` e do `fiapx-video-api`.
-4. O `fiapx-video-api` depende do authorizer (`fiapx-auth`) para as rotas `/api/videos` e da fila
+4. O `fiapx-auth` publica e-mails de senha na fila `notification-commands`, criada pelo
+   `fiapx-notification` (ADR-017).
+5. O `fiapx-video-api` depende do authorizer (`fiapx-auth`) para as rotas `/api/videos` e da fila
    `notification-commands` (`fiapx-notification`) para publicar `SendNotification`.
 
 Depois da primeira subida, cada repositório faz deploy de forma independente.

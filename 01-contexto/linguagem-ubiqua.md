@@ -34,6 +34,11 @@ flowchart LR
 | Autenticação | `AuthenticateUser` | Conferência da credencial e emissão do token de acesso |
 | Token de acesso | `access_token` | JWT assinado com RS256, válido por 1 hora, com `sub`, `email`, `name`, `iss = fiapx-auth` e `aud = fiapx-api` |
 | Autorizador | `authorizer` | Lambda que valida o token em cada requisição protegida e repassa o usuário para a API |
+| Política de senha | `Password` | Mínimo de 8 e máximo de 72 caracteres, com pelo menos uma letra maiúscula, um número e um símbolo |
+| Recuperação de senha | `RequestPasswordReset` | Pedido de um link de redefinição por e-mail. A resposta é sempre a mesma, exista ou não o cadastro |
+| Token de redefinição | `PasswordResetToken` | Segredo aleatório enviado no link, válido por 30 minutos e de uso único. O banco guarda só o hash |
+| Redefinição de senha | `ResetPassword` | Troca da senha a partir do link, que já autentica o usuário |
+| Troca de senha | `ChangePassword` | Troca da senha por um usuário logado, conferindo a senha atual |
 
 ## Gestão de Vídeos (`fiapx-video-api`)
 
@@ -79,7 +84,7 @@ flowchart LR
 |---|---|---|
 | Notificação | `Notification` | Um e-mail a ser enviado em resposta a um comando `SendNotification` |
 | Destinatário | `Recipient` | Nome e e-mail de quem recebe. O e-mail é normalizado em minúsculas e é a partition key no DynamoDB |
-| Modelo de mensagem | `Template` | `VIDEO_FAILED` (obrigatório) ou `VIDEO_COMPLETED` (opcional), em pt-BR, nas versões HTML e texto |
+| Modelo de mensagem | `Template` | `VIDEO_FAILED` (obrigatório), `VIDEO_COMPLETED` (opcional), `PASSWORD_RESET` e `PASSWORD_CHANGED`, em pt-BR, nas versões HTML e texto |
 | Status da notificação | `NotificationStatus` | `PENDING`, `SENT`, `FAILED`, `DELIVERED`, `BOUNCED` ou `COMPLAINED` |
 | Histórico de envios | tabela `notifications` | Todos os e-mails enviados para um destinatário, em ordem cronológica |
 | Remetente | — | `nao-responda@hackfiapf5.click`, com nome de exibição "FIAP X" |

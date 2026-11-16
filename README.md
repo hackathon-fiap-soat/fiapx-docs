@@ -21,6 +21,7 @@ A documentação vem antes do código: os outros repositórios implementam o que
 - [DS-03 Processamento com sucesso](02-domain-storytelling/ds-03-processamento-com-sucesso.md)
 - [DS-04 Falha e notificação](02-domain-storytelling/ds-04-falha-e-notificacao.md)
 - [DS-05 Consulta de status e download](02-domain-storytelling/ds-05-consulta-status-e-download.md)
+- [DS-06 Recuperação e troca de senha](02-domain-storytelling/ds-06-recuperacao-e-troca-de-senha.md)
 
 ### 3. Arquitetura
 
@@ -35,7 +36,7 @@ A documentação vem antes do código: os outros repositórios implementam o que
 
 ### 4. Decisões
 
-- [ADRs](04-adrs/README.md) (16 decisões)
+- [ADRs](04-adrs/README.md) (17 decisões)
 - [RFCs](05-rfcs/README.md) (10 comparações de alternativas)
 
 ### 5. Deploy e operação
@@ -52,8 +53,9 @@ A documentação vem antes do código: os outros repositórios implementam o que
 
 ### 7. Imagens dos diagramas
 
-- [PNG e SVG de todos os diagramas](diagramas/README.md), gerados a partir dos blocos Mermaid, para usar no
-  documento de entrega, em slides e no vídeo
+- [PNG e SVG de todos os diagramas](diagramas/README.md), organizados por assunto e na ordem de leitura,
+  para usar no documento de entrega, em slides e no vídeo. Um diagrama novo precisa de uma entrada no
+  `CATALOGO` de `scripts/render-diagrams.py` (o CI confere)
 
 ### 8. Entrega
 
@@ -97,7 +99,7 @@ npx @stoplight/spectral-cli@6.15.0 lint api/openapi.yaml --ruleset api/.spectral
 Depois de alterar qualquer diagrama, regere as imagens e inclua-as no mesmo PR:
 
 ```bash
-python3 scripts/render-diagrams.py   # gera diagramas/*.png, diagramas/*.svg e diagramas/README.md
+python3 scripts/render-diagrams.py   # gera diagramas/<assunto>/*.png e *.svg e o índice diagramas/README.md
 ```
 
 O workflow [`docs.yml`](.github/workflows/docs.yml) roda as mesmas validações em todo pull request.

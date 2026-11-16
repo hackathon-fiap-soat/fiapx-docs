@@ -32,7 +32,7 @@ para o produtor; o consumidor ignora campos desconhecidos (ver [Versionamento](#
 | `fiapx-<env>-processing-commands` | [`ProcessVideo`](process-video.v1.schema.json), [`CleanupArtifacts`](cleanup-artifacts.v1.schema.json) | `video-api` (`outbox-relay`) | `video-processor` |
 | `fiapx-<env>-saga-replies.fifo` | [`ProcessingStarted`](processing-started.v1.schema.json), [`VideoProcessed`](video-processed.v1.schema.json), [`VideoProcessingFailed`](video-processing-failed.v1.schema.json), [`ArtifactsCleaned`](artifacts-cleaned.v1.schema.json) | `video-processor` | `video-api` (`saga-consumer`) |
 | `fiapx-<env>-saga-replies.fifo` | [`NotificationSent`](notification-sent.v1.schema.json), [`NotificationFailed`](notification-failed.v1.schema.json) | `fiapx-notification` (Lambda) | `video-api` (`saga-consumer`) |
-| `fiapx-<env>-notification-commands` | [`SendNotification`](send-notification.v1.schema.json) | `video-api` (`outbox-relay`) | `fiapx-notification` (Lambda) |
+| `fiapx-<env>-notification-commands` | [`SendNotification`](send-notification.v1.schema.json) | `video-api` (`outbox-relay`, templates de vídeo) e `fiapx-auth` (Lambda `password`, templates de senha) | `fiapx-notification` (Lambda) |
 
 Cada fila tem DLQ própria (`*-dlq`). Exemplos válidos de cada mensagem estão em [`examples/`](examples/).
 
@@ -93,3 +93,14 @@ npx -y -p ajv-cli@5 -p ajv-formats@3 ajv validate --spec=draft2020 --strict=true
 Os schemas referenciam o envelope por `$ref` relativo (`envelope.schema.json`), resolvido pelo `$id`
 `https://github.com/hackathon-fiap-soat/fiapx-docs/contracts/`. Nos testes dos serviços, carregue o envelope
 e o schema da mensagem no mesmo validador (Ajv no Node.js; `opis/json-schema` ou equivalente no PHP).
+
+## Mensagens fora da saga
+
+O `SendNotification` com os templates `PASSWORD_RESET` e `PASSWORD_CHANGED` é emitido pelo `fiapx-auth`
+e não pertence a nenhuma saga: `saga_id` e `video_id` vão como `null`, e o `fiapx-notification` não
+publica `NotificationSent`/`NotificationFailed` na `saga-replies.fifo` nesse caso. O envelope só aceita
+esses campos nulos em `SendNotification`. O `action_url` do `PASSWORD_RESET` contém o token de
+redefinição e nunca é gravado em log nem no DynamoDB (ver ADR-017).
+
+Exemplos extras de uma mesma mensagem seguem o padrão `examples/<nome>--<variante>.json`, por exemplo
+[`send-notification.v1--password-reset.json`](examples/send-notification.v1--password-reset.json).

@@ -163,3 +163,39 @@ sequenceDiagram
     V-->>U: 404
   end
 ```
+
+## 5. Recuperação e troca de senha
+
+```mermaid
+sequenceDiagram
+  autonumber
+  actor U as Usuário
+  participant GW as API Gateway
+  participant PW as Lambda password
+  participant DB as Aurora fiapx_auth
+  participant QN as SQS notification-commands
+  participant N as Lambda notification
+  participant SES as Amazon SES
+
+  U->>GW: POST /api/auth/password/forgot {email}
+  GW->>PW: invoca (sem authorizer, rate limit restrito)
+  PW->>DB: busca usuário pelo e-mail
+  alt e-mail cadastrado
+    PW->>DB: invalida tokens abertos e grava hash SHA-256 do novo token (expira em 30 min)
+    PW->>QN: SendNotification PASSWORD_RESET (saga_id nulo, action_url com o token)
+    QN->>N: SendNotification
+    N->>SES: SendEmail com o link
+    SES-->>U: e-mail "Redefina sua senha"
+  end
+  PW-->>U: 202 (mesma resposta em qualquer caso)
+  U->>GW: POST /api/auth/password/reset/verify {token}
+  GW->>PW: invoca
+  PW->>DB: busca pelo hash, confere expires_at e used_at
+  PW-->>U: 200 {email_masked, expires_at} ou 422 genérico
+  U->>GW: POST /api/auth/password/reset {token, password}
+  GW->>PW: invoca
+  PW->>DB: BEGIN: nova senha (bcrypt 12), token used_at, COMMIT
+  PW->>QN: SendNotification PASSWORD_CHANGED
+  PW-->>U: 200 {access_token, token_type, expires_in}
+  Note over U,PW: Troca logado: PUT /api/auth/password {current_password, new_password}<br/>passa pelo authorizer, confere a senha atual, troca e envia PASSWORD_CHANGED (204)
+```

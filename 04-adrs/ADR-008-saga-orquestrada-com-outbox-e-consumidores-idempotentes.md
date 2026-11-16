@@ -25,22 +25,9 @@ Adotamos uma **SAGA orquestrada** cujo orquestrador vive no `fiapx-video-api`. O
 
 Estados: `STARTED → UPLOAD_VALIDATED → QUOTA_RESERVED → PROCESSING_REQUESTED → PROCESSING → COMPLETED → NOTIFIED`; na falha, `COMPENSATING → COMPENSATED (FAILED) → NOTIFIED`. Uma falha no passo N executa as compensações dos passos anteriores em ordem inversa, marca o vídeo como `FAILED` com `failure_reason` e envia `SendNotification(VIDEO_FAILED)`.
 
-```mermaid
-stateDiagram-v2
-  [*] --> STARTED
-  STARTED --> UPLOAD_VALIDATED
-  STARTED --> COMPENSATING: upload inválido
-  UPLOAD_VALIDATED --> QUOTA_RESERVED
-  UPLOAD_VALIDATED --> COMPENSATING: cota excedida
-  QUOTA_RESERVED --> PROCESSING_REQUESTED
-  PROCESSING_REQUESTED --> PROCESSING: ProcessingStarted
-  PROCESSING --> COMPLETED: VideoProcessed
-  PROCESSING --> COMPENSATING: VideoProcessingFailed ou timeout
-  COMPENSATING --> COMPENSATED: compensações concluídas
-  COMPLETED --> NOTIFIED: NotificationSent
-  COMPENSATED --> NOTIFIED: NotificationSent
-  NOTIFIED --> [*]
-```
+![Estados da saga](../diagramas/05-saga/estados-da-saga.png)
+
+Diagrama mantido em [saga.md](../03-arquitetura/saga.md#estados-da-saga).
 
 Regras de robustez:
 

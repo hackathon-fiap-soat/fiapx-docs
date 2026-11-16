@@ -26,15 +26,9 @@ O `fiapx-video-processor` é um worker **PHP 8.4.27 + Laravel 13** com `ffmpeg` 
 - **Graceful shutdown:** `SIGTERM` tratado com `pcntl`. O pod termina o vídeo atual e não pega novas mensagens, com `terminationGracePeriodSeconds` maior que o tempo máximo de processamento esperado.
 - **Imagem:** `php:8.4.27-cli-alpine` + `ffmpeg` + extensões `zip` e `pcntl`, usuário não-root. Permissões IAM por EKS Pod Identity (ou IRSA): S3 get/put/delete nos prefixos próprios e SQS.
 
-```mermaid
-flowchart LR
-  Q[["SQS processing-commands"]] -->|"ApproximateNumberOfMessages"| K["KEDA ScaledObject"]
-  K -->|"escala 1..10"| D["Deployment video-processor"]
-  Q -->|"1 mensagem por pod"| D
-  D -->|"ChangeMessageVisibility a cada 60 s"| Q
-  D -->|"frames.zip"| S3[("S3 results/")]
-  D -->|"respostas"| R[["SQS saga-replies.fifo"]]
-```
+![Escala do worker pelo KEDA](../diagramas/07-seguranca-e-escala/escala-keda.png)
+
+Diagrama mantido em [escalabilidade-e-resiliencia.md](../03-arquitetura/escalabilidade-e-resiliencia.md#escala-por-componente).
 
 ## Alternativas consideradas
 

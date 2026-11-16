@@ -6,7 +6,7 @@ os arquivos no **S3**.
 
 | Armazenamento | Dono | Conteúdo |
 |---|---|---|
-| Aurora `fiapx_auth` | `fiapx-auth` | Usuários e hashes de senha |
+| Aurora `fiapx_auth` | `fiapx-auth` | Usuários, hashes de senha e tokens de redefinição (só o hash) |
 | Aurora `fiapx_video` | `fiapx-video-api` | Vídeos, sagas, cotas, outbox e mensagens processadas |
 | DynamoDB `fiapx-<env>-notifications` | `fiapx-notification` | Histórico e idempotência dos e-mails |
 | S3 `fiapx-<env>-videos` | `fiapx-infra` (usado por video-api e processor) | `uploads/` (7 dias) e `results/` (30 dias) |
@@ -14,10 +14,15 @@ os arquivos no **S3**.
 O `video-processor` não tem banco: é stateless e usa a chave `results/{video_id}/frames.zip` como chave
 de idempotência.
 
-## `fiapx_auth`
+## Diagrama ER
+
+Os dois databases ficam no mesmo diagrama, mas não há chave estrangeira entre eles: `videos.user_id` é
+uma referência lógica ao `fiapx_auth.users`. As tabelas `USERS` e `PASSWORD_RESET_TOKENS` são do
+`fiapx_auth`; as demais, do `fiapx_video`.
 
 ```mermaid
 erDiagram
+  USERS ||--o{ PASSWORD_RESET_TOKENS : "pede"
   USERS {
     char36 id PK "UUID v7"
     varchar120 name
@@ -26,12 +31,14 @@ erDiagram
     timestamp created_at
     timestamp updated_at
   }
-```
-
-## `fiapx_video`
-
-```mermaid
-erDiagram
+  PASSWORD_RESET_TOKENS {
+    char36 id PK "UUID v7"
+    char36 user_id FK
+    char64 token_hash UK "SHA-256 do token"
+    timestamp expires_at "criação + 30 min"
+    timestamp used_at "nulo até usar"
+    timestamp created_at
+  }
   VIDEOS ||--o| PROCESSING_SAGAS : "processado por"
   PROCESSING_QUOTAS ||..o{ VIDEOS : "limita (user_id lógico)"
 
@@ -125,6 +132,18 @@ CREATE TABLE users (
   created_at     TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at     TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   UNIQUE KEY uq_users_email (email)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+CREATE TABLE password_reset_tokens (
+  id          CHAR(36)  NOT NULL PRIMARY KEY,
+  user_id     CHAR(36)  NOT NULL,
+  token_hash  CHAR(64)  NOT NULL,
+  expires_at  TIMESTAMP NOT NULL,
+  used_at     TIMESTAMP NULL,
+  created_at  TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY uq_reset_token_hash (token_hash),
+  KEY idx_reset_user_created (user_id, created_at),
+  CONSTRAINT fk_reset_user FOREIGN KEY (user_id) REFERENCES users(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 ```
 

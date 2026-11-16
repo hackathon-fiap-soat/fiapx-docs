@@ -30,22 +30,9 @@ Validação em duas camadas:
 1. O `authorizer` valida assinatura, `iss`, `aud` e `exp` e repassa `user_id`, `email` e `name` no contexto. O API Gateway injeta esses valores nos headers `x-user-id`, `x-user-email` e `x-user-name` para o `video-api`.
 2. O `video-api` (`GatewayUserResolver`) lê os headers `x-user-*` e **revalida o JWT com a chave pública**, como defesa em profundidade.
 
-```mermaid
-sequenceDiagram
-  actor U as Usuário
-  participant GW as API Gateway
-  participant L as Lambda login
-  participant Z as Lambda authorizer
-  participant V as video-api
-  U->>GW: POST /api/auth/login
-  GW->>L: invoca
-  L-->>U: access_token JWT RS256
-  U->>GW: GET /api/videos com Bearer
-  GW->>Z: valida token, cache 300 s
-  Z-->>GW: isAuthorized e contexto do usuário
-  GW->>V: request com x-user-id, x-user-email, x-user-name
-  V->>V: revalida JWT com a chave pública
-```
+![Sequência de cadastro e login](../diagramas/04-fluxos/seq-01-cadastro-e-login.png)
+
+Diagrama mantido em [sequencias.md](../03-arquitetura/sequencias.md#1-cadastro-e-login).
 
 Segurança adicional: respostas de erro genéricas (não revelam se o e-mail existe) e rate limit no stage do API Gateway. As Lambdas rodam dentro da VPC para acessar o Aurora.
 

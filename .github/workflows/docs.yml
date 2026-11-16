@@ -52,3 +52,5 @@ jobs:
       - run: ./scripts/check-mermaid.sh
         env:
           PUPPETEER_CFG: ${{ runner.temp }}/puppeteer.json
+      - name: Todo diagrama tem imagem em diagramas/
+        run: python3 scripts/render-diagrams.py --check

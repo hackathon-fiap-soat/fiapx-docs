@@ -29,20 +29,9 @@ O vídeo não passa pelo API Gateway nem pelo EKS.
 - O bucket envia `s3:ObjectCreated` (filtro no prefixo `uploads/`) para a fila `fiapx-<env>-video-uploaded` (SQS Standard, visibility 60 s, DLQ com `maxReceiveCount = 5`).
 - O `saga-consumer` do `video-api` consome o evento e inicia a `ProcessingSaga`. O primeiro passo, `ValidateUpload`, faz `HeadObject` e confere existência, tamanho e extensão/MIME (mp4, avi, mov, mkv, wmv, flv, webm). Se o upload for inválido, o vídeo vai para `FAILED` com motivo `INVALID_UPLOAD` e o objeto é apagado (`DeleteUploadedObject`).
 
-```mermaid
-sequenceDiagram
-  actor U as Navegador
-  participant V as video-api
-  participant S3 as S3 fiapx-videos
-  participant Q as SQS video-uploaded
-  participant C as saga-consumer
-  U->>V: POST /api/videos
-  V-->>U: 201 com url e fields, status PENDING_UPLOAD
-  U->>S3: POST multipart direto, arquivo por último
-  S3->>Q: s3:ObjectCreated em uploads/
-  Q->>C: evento
-  C->>C: inicia saga, ValidateUpload com HeadObject
-```
+![Sequência de upload e processamento](../diagramas/04-fluxos/seq-02-upload-e-processamento.png)
+
+Diagrama mantido em [sequencias.md](../03-arquitetura/sequencias.md#2-upload-e-processamento-com-sucesso).
 
 ## Alternativas consideradas
 

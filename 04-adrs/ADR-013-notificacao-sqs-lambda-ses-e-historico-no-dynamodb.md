@@ -85,3 +85,10 @@ A comparação completa está na RFC-008.
 - Essa janela é pequena e um e-mail duplicado raro é aceitável para o caso. O `ses_message_id` gravado permite auditar.
 - O LSI faz parte do Terraform desde a criação. O volume por e-mail é pequeno e expira em 90 dias.
 - Testes com o mailbox simulator do SES e smoke test no pipeline (`success@simulator.amazonses.com` + conferência do item no DynamoDB).
+
+## Atualização
+
+O [ADR-017](ADR-017-recuperacao-e-troca-de-senha.md) acrescenta os templates `PASSWORD_RESET` e
+`PASSWORD_CHANGED`, emitidos pelo `fiapx-auth` fora da saga (`saga_id` e `video_id` nulos). Para essas
+mensagens a Lambda não publica resposta na `saga-replies.fifo`, e o `action_url` (que contém o token de
+redefinição) não é gravado no DynamoDB nem em log.

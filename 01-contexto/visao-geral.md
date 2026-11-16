@@ -68,11 +68,11 @@ ffmpeg -i <video> -vf fps=1 -y <tempDir>/frame_%04d.png   # extrai 1 frame por s
 
 ## Escopo
 
-**Dentro do escopo:** cadastro e login, upload de vários vídeos, processamento assíncrono, listagem de
+**Dentro do escopo:** cadastro e login, recuperação e troca de senha, upload de vários vídeos, processamento assíncrono, listagem de
 status, download do zip, e-mail de falha (e, opcionalmente, de conclusão), infraestrutura na AWS por
 Terraform, CI/CD, observabilidade e teste de carga.
 
-**Fora do escopo:** recuperação de senha, edição de perfil, compartilhamento de vídeos entre usuários,
+**Fora do escopo:** edição dos dados de perfil, compartilhamento de vídeos entre usuários,
 escolha de outra taxa de frames pelo usuário e múltiplos ambientes além de `local` e `prod`.
 
 ## Visão da solução
