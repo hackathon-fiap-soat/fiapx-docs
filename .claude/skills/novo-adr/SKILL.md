@@ -31,8 +31,8 @@ description: Cria um ADR novo no fiapx-docs no formato MADR usado pelo time, atu
    - a tabela de `04-adrs/README.md`;
    - os documentos afetados (`03-arquitetura/`, `06-deploy/`, `contracts/`, `api/openapi.yaml`) e links
      cruzados nos ADRs relacionados;
-   - na especificação local `../Projeto-hackton.md`, a lista de ADRs e as contagens ("N ADRs" na Etapa 1
-     e no checklist do §14), se o arquivo existir.
+   - na especificação `00-especificacao/Projeto-hackton.md`, a lista de ADRs e as contagens ("N ADRs" na
+     Etapa 1 e no checklist do §14), e o total no índice do `README.md`.
 5. Diagrama no ADR: siga a skill `diagramas`. Se ele repetiria um diagrama existente, referencie a imagem.
 6. Valide com a skill `validar-docs` e abra o PR com a skill `fiapx-pr`.
 7. Comunique a decisão ao time no relatório final.
