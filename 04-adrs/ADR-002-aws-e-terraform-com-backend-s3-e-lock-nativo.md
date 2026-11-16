@@ -22,7 +22,7 @@ A escolha de cloud e IaC é uma decisão fechada pelo time (`Projeto-hackton.md`
 - **Organização do `fiapx-infra`:** módulos `network`, `eks`, `eks-addons`, `aurora`, `storage`, `messaging`, `ses`, `ecr`, `edge`, `web-hosting` e `ssm-outputs`, compostos em `envs/prod/`.
 - **Script de criação do banco** (entregável): `fiapx-infra/sql/create-databases.sql` cria `fiapx_auth`, `fiapx_video` e os usuários com GRANT mínimo ([ADR-005](ADR-005-aurora-mysql-serverless-v2-um-database-por-servico.md)).
 - **Ambiente local:** `fiapx-infra/local/docker-compose.yml` com `mysql:8.0`, LocalStack (S3, SQS, SES, SSM, Secrets Manager) e Mailpit.
-- **Proteções:** `prevent_destroy` no Aurora, no bucket de vídeos e na tabela DynamoDB. Só o workflow `destroy.yml` desliga essas proteções, por variável explícita ([ADR-016](ADR-016-terraform-apply-somente-via-github-actions.md)).
+- **Proteções:** `prevent_destroy` no Aurora, no bucket de vídeos e na tabela DynamoDB. Só o workflow `destroy-all.yml` desliga essas proteções, por variável explícita ([ADR-016](ADR-016-terraform-apply-somente-via-github-actions.md)).
 
 Exemplo do backend:
 

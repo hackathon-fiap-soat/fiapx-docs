@@ -47,6 +47,8 @@ O time tem dois integrantes, o que torna inviável exigir aprovação de outra p
 ![Ordem de deploy entre repositórios](../diagramas/08-deploy/ordem-de-deploy.png)
 
 Diagrama mantido em [fluxo-de-deploy.md](../06-deploy/fluxo-de-deploy.md#ordem-entre-repositórios-primeira-subida).
+A subida e o destroy do ambiente inteiro nessa ordem são feitos pelo orquestrador do `fiapx-infra`
+([ADR-018](ADR-018-orquestracao-do-deploy-no-github-actions.md)).
 
 Depois da primeira subida, cada repositório faz deploy de forma independente.
 

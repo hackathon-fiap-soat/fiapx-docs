@@ -68,11 +68,12 @@ Valores aproximados, para orientar a decisão de manter o ambiente desligado for
 
 Para manter o custo baixo, o ambiente `prod` é destruído fora das demonstrações:
 
-1. Rodar o workflow manual `destroy.yml` no `fiapx-infra`, digitando a confirmação `destroy-prod`.
+1. Rodar o workflow manual `destroy-all.yml` no `fiapx-infra`, digitando a confirmação `destroy-prod`.
 2. O workflow desliga o `prevent_destroy` (Aurora, bucket de vídeos e tabela DynamoDB) por variável
-   explícita e roda `terraform destroy` na ordem inversa da subida (aplicações, Lambdas e por fim a
-   infraestrutura).
+   explícita e derruba tudo na ordem inversa da subida: front-end, aplicações do EKS, Lambdas e por fim a
+   infraestrutura ([ADR-018](../04-adrs/ADR-018-orquestracao-do-deploy-no-github-actions.md)).
 3. Ficam de pé só o bucket do state, as roles OIDC (`bootstrap`), o domínio registrado e a hosted zone.
 
-Para religar, basta seguir a [ordem de deploy](fluxo-de-deploy.md#ordem-entre-repositórios-primeira-subida)
-a partir do `fiapx-infra`, disparando os workflows de cada repositório.
+Para religar, rodar o workflow manual `deploy-all.yml` no `fiapx-infra`, digitando `deploy-prod`. Ele
+segue a [ordem de deploy](fluxo-de-deploy.md#ordem-entre-repositórios-primeira-subida) e termina com o
+smoke test ponta a ponta.

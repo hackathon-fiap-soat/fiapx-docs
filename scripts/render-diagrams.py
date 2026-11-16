@@ -60,6 +60,7 @@ CATALOGO = {
     ("06-deploy/fluxo-de-deploy.md", 1): ("08-deploy", "pipelines", "Pipelines por tipo de repositório"),
     ("06-deploy/fluxo-de-deploy.md", 2): ("08-deploy", "ordem-de-deploy", "Ordem de deploy entre repositórios (primeira subida)"),
     ("04-adrs/ADR-016-terraform-apply-somente-via-github-actions.md", 1): ("08-deploy", "politica-terraform-apply", "Política de terraform apply (ADR-016)"),
+    ("04-adrs/ADR-018-orquestracao-do-deploy-no-github-actions.md", 1): ("08-deploy", "orquestracao-deploy-all", "Orquestração do deploy: deploy-all no fiapx-infra (ADR-018)"),
     ("07-observabilidade/observabilidade.md", 1): ("09-observabilidade", "fluxo-de-telemetria", "Fluxo de telemetria para o New Relic"),
 }
 

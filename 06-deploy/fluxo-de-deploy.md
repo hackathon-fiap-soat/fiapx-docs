@@ -85,7 +85,25 @@ Por que essa ordem:
 5. O `fiapx-video-api` depende do authorizer (`fiapx-auth`) para as rotas `/api/videos` e da fila
    `notification-commands` (`fiapx-notification`) para publicar `SendNotification`.
 
-Depois da primeira subida, cada repositório faz deploy de forma independente.
+Depois da primeira subida, cada repositório faz deploy de forma independente: todo merge na `main` faz
+deploy do próprio serviço.
+
+## Orquestração (subir e derrubar tudo)
+
+Como o ambiente `prod` é destruído fora das demonstrações, a subida na ordem acima é feita por um
+orquestrador no `fiapx-infra` ([ADR-018](../04-adrs/ADR-018-orquestracao-do-deploy-no-github-actions.md)):
+
+| Workflow | Confirmação | O que faz |
+|---|---|---|
+| `deploy-all.yml` | `deploy-prod` | `apply` da infra e `create-databases.sql`, depois chama o `deploy.yml` de cada repositório na ordem e roda o smoke test ponta a ponta. Input opcional `a_partir_de` para retomar uma subida interrompida |
+| `destroy-all.yml` | `destroy-prod` | Chama o `destroy.yml` de cada repositório na ordem inversa e destrói a infra por último |
+
+Cada repositório de serviço tem um `deploy.yml` com dois gatilhos, `push` na `main` (merge) e
+`workflow_call` (orquestrador), para que o deploy seja o mesmo nos dois caminhos. A role OIDC de cada
+serviço confia no `deploy.yml` daquele serviço pelo `job_workflow_ref`, seja qual for o chamador.
+
+Um merge feito com o ambiente destruído gera um deploy que falha ao ler os parâmetros do SSM, com uma
+mensagem dizendo para rodar o `deploy-all`.
 
 ## Mudanças de contrato
 

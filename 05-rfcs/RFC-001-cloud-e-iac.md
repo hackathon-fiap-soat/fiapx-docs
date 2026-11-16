@@ -56,7 +56,7 @@ hackathon.
 
 ## Riscos
 
-- **Custo da conta:** EKS, NAT Gateway e Aurora geram custo contínuo. Mitigação: `destroy.yml` manual
+- **Custo da conta:** EKS, NAT Gateway e Aurora geram custo contínuo. Mitigação: `destroy-all.yml` manual
   com confirmação digitada, ambiente ligado só nas demonstrações e desenvolvimento no LocalStack.
 - **Lock-in nos serviços gerenciados** (SQS, SES, Lambda). Mitigação: portas e adapters da Clean
   Architecture (`ObjectStorage`, `CommandBus`, `EmailSender`) isolam o SDK da AWS do domínio.

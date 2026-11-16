@@ -22,3 +22,4 @@ Cada ADR traz Contexto, Decisão, Alternativas consideradas e Consequências; de
 | 015 | [Remetente de e-mail: domínio próprio no Route 53 com DKIM/SPF/DMARC e uso do sandbox do SES](ADR-015-remetente-de-email-dominio-proprio-e-sandbox-do-ses.md) | Aceito | 2026-11-16 |
 | 016 | [`terraform apply` somente via GitHub Actions; apply local apenas para testes (§11.5)](ADR-016-terraform-apply-somente-via-github-actions.md) | Aceito | 2026-11-16 |
 | 017 | [Recuperação e troca de senha no `fiapx-auth`, com e-mail pelo `fiapx-notification`](ADR-017-recuperacao-e-troca-de-senha.md) | Aceito | 2026-11-16 |
+| 018 | [Orquestração do deploy do ambiente inteiro no GitHub Actions (`fiapx-infra`)](ADR-018-orquestracao-do-deploy-no-github-actions.md) | Aceito | 2026-11-16 |
