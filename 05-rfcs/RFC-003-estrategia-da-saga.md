@@ -51,7 +51,7 @@ transação distribuída entre Aurora, S3, SQS e SES, precisamos de:
 | --- | --- | --- | --- |
 | Onde fica o estado | `processing_sagas` no Aurora, junto do `Video` | Execução da state machine (fora do banco do serviço) | Espalhado entre os serviços |
 | Visibilidade do fluxo | Alta: `history` JSON + evento `VideoSagaTransition` no New Relic | Alta: console visual | Baixa: depende de rastreio distribuído |
-| Testabilidade | Alta: agregado em PHP puro, unit + Behat, sem AWS | Média: precisa de Step Functions Local ou da AWS | Baixa: cenários exigem todos os serviços |
+| Testabilidade | Alta: agregado de domínio sem dependência do framework, unit + Behat, sem AWS | Média: precisa de Step Functions Local ou da AWS | Baixa: cenários exigem todos os serviços |
 | Consistência entre estado e mensagem | Outbox na mesma transação do MySQL | Exige sincronizar a execução com o banco (dual write) | Cada serviço precisa de outbox próprio |
 | Compensações e timeout | Código de domínio + comando agendado | Nativos (`Catch`, `TimeoutSeconds`) | Difícil: ninguém "dono" do timeout |
 | Acoplamento | Orquestrador conhece os participantes | Mesmo acoplamento, em ASL/JSON | Baixo, mas regras implícitas |

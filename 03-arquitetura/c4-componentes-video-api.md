@@ -56,7 +56,7 @@ flowchart TB
 |---|---|---|
 | Domain | `Video` | Agregado com `create()`, `markUploaded()`, `markQueued()`, `markProcessing()`, `complete()`, `fail()`, `expire()`. Rejeita transições inválidas |
 | Domain | VOs | `VideoId`, `VideoStatus`, `StorageKey`, `FileName`, `FileSize` (≤ 500 MB), `VideoFormat` (7 extensões), `FailureReason` |
-| Domain | `ProcessingSaga` | Estado, passo atual, prazo, histórico e compensações, em PHP puro |
+| Domain | `ProcessingSaga` | Estado, passo atual, prazo, histórico e compensações, sem dependência do Laravel |
 | Domain | `ProcessingQuota` | `reserve()` e `release()` da cota de processamentos simultâneos (padrão 5) |
 | Application | `RequestVideoUploadUseCase` | Cria o vídeo `PENDING_UPLOAD` e pede o POST pré-assinado ao `ObjectStorage` |
 | Application | `ListUserVideosUseCase`, `ShowVideoUseCase` | Leitura filtrada pelo usuário do token |
