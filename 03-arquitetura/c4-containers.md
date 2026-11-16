@@ -1,11 +1,16 @@
 # C4 — Nível 2: containers
 
+O nível 2 está dividido em dois diagramas para ficar legível: o caminho síncrono das requisições do
+usuário e o processamento assíncrono coordenado pela SAGA.
+
+## Caminho síncrono: navegador, autenticação e API
+
 ```mermaid
 flowchart LR
-  U["Usuário<br/>navegador"] -->|HTTPS| CF[CloudFront]
+  U["Usuário<br/>navegador"] -->|HTTPS| CF["CloudFront"]
   CF -->|"/*"| WEB[("S3 site<br/>fiapx-web")]
   CF -->|"/api/*"| APIGW["API Gateway<br/>HTTP API"]
-  U -->|"POST pré-assinado"| S3[("S3 fiapx-videos")]
+  U -->|"POST pré-assinado<br/>(upload direto)"| S3[("S3<br/>fiapx-videos")]
 
   subgraph Auth["fiapx-auth"]
     LREG["Lambda register"]
@@ -15,37 +20,45 @@ flowchart LR
 
   APIGW -->|"/api/auth/*"| LREG & LLOGIN
   APIGW -. "valida JWT" .-> LAUTHZ
-  APIGW -->|"/api/videos/* via VPC Link"| ALB["ALB interno"]
+  LREG & LLOGIN --> AURORA_AUTH[("Aurora<br/>fiapx_auth")]
 
-  subgraph EKS["Amazon EKS"]
-    API["video-api-web<br/>Laravel 13"]
-    RELAY["outbox-relay"]
-    CONS["saga-consumer"]
-    CRON["CronJob schedule:run"]
-    WRK["video-processor<br/>Laravel 13 + ffmpeg<br/>KEDA 1..10"]
-  end
-
-  ALB --> API
-  LREG & LLOGIN --> AURORA_AUTH[("Aurora MySQL<br/>fiapx_auth")]
-  API & RELAY & CONS & CRON --> AURORA_VIDEO[("Aurora MySQL<br/>fiapx_video")]
-
-  S3 -->|ObjectCreated| Q_UP[["SQS video-uploaded"]]
-  Q_UP --> CONS
-  RELAY -->|"ProcessVideo / CleanupArtifacts"| Q_PROC[["SQS processing-commands"]]
-  RELAY -->|SendNotification| Q_NOTIF[["SQS notification-commands"]]
-  Q_PROC --> WRK
-  WRK <--> S3
-  WRK -->|respostas| Q_REPLY[["SQS saga-replies.fifo"]]
-  Q_NOTIF --> LNOTIF["Lambda notification"]
-  LNOTIF --> SES["Amazon SES"]
-  LNOTIF <--> DDB[("DynamoDB<br/>notifications<br/>PK = email")]
-  LNOTIF -->|respostas| Q_REPLY
-  Q_REPLY --> CONS
-
-  EKS & Auth & LNOTIF -. "APM e logs" .-> NR["New Relic"]
+  APIGW -->|"/api/videos/*<br/>VPC Link"| ALB["ALB interno"]
+  ALB --> API["video-api-web<br/>Laravel 13 no EKS"]
+  API --> AURORA_VIDEO[("Aurora<br/>fiapx_video")]
+  API -->|"presign POST e GET"| S3
 ```
 
-Cada fila tem uma DLQ própria (`*-dlq`), com `maxReceiveCount = 3` (`5` na `video-uploaded`).
+## Processamento assíncrono: SAGA, worker e notificação
+
+```mermaid
+flowchart LR
+  S3[("S3<br/>fiapx-videos")] -->|ObjectCreated| Q_UP[["SQS<br/>video-uploaded"]]
+
+  subgraph VAPI["fiapx-video-api no EKS"]
+    CONS["saga-consumer"]
+    RELAY["outbox-relay"]
+    CRON["CronJob<br/>schedule:run"]
+  end
+
+  Q_UP --> CONS
+  CONS & RELAY & CRON --> AURORA_VIDEO[("Aurora<br/>fiapx_video<br/>saga + outbox")]
+  RELAY -->|"ProcessVideo<br/>CleanupArtifacts"| Q_PROC[["SQS<br/>processing-commands"]]
+  RELAY -->|SendNotification| Q_NOTIF[["SQS<br/>notification-commands"]]
+
+  Q_PROC --> WRK["video-processor<br/>ffmpeg, KEDA 1..10"]
+  WRK <-->|"vídeo e zip"| S3
+  WRK -->|respostas| Q_REPLY[["SQS<br/>saga-replies.fifo"]]
+
+  Q_NOTIF --> LNOTIF["Lambda notification<br/>fiapx-notification"]
+  LNOTIF --> SES["Amazon SES"]
+  LNOTIF <--> DDB[("DynamoDB<br/>notifications")]
+  LNOTIF -->|respostas| Q_REPLY
+  Q_REPLY --> CONS
+```
+
+Cada fila tem uma DLQ própria (`*-dlq`), com `maxReceiveCount = 3` (`5` na `video-uploaded`). Todos os
+containers enviam APM, logs e métricas ao New Relic (omitido no diagrama para não poluir; ver
+[observabilidade](../07-observabilidade/observabilidade.md)).
 
 ## Containers
 

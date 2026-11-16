@@ -50,7 +50,12 @@ A documentação vem antes do código: os outros repositórios implementam o que
 - [Mensagens (JSON Schema)](contracts/README.md)
 - [API HTTP (OpenAPI 3.1)](api/openapi.yaml)
 
-### 7. Entrega
+### 7. Imagens dos diagramas
+
+- [PNG e SVG de todos os diagramas](diagramas/README.md), gerados a partir dos blocos Mermaid, para usar no
+  documento de entrega, em slides e no vídeo
+
+### 8. Entrega
 
 - [Documento de entrega](entrega/entrega-fase5.md) (rascunho, exportado para PDF na Etapa 10)
 - [Roteiro do vídeo](entrega/roteiro-video.md)
@@ -87,6 +92,12 @@ npx @stoplight/spectral-cli@6.15.0 lint api/openapi.yaml --ruleset api/.spectral
 
 # Diagramas Mermaid: renderiza todos os blocos e falha se algum tiver erro de sintaxe
 ./scripts/check-mermaid.sh
+```
+
+Depois de alterar qualquer diagrama, regere as imagens e inclua-as no mesmo PR:
+
+```bash
+python3 scripts/render-diagrams.py   # gera diagramas/*.png, diagramas/*.svg e diagramas/README.md
 ```
 
 O workflow [`docs.yml`](.github/workflows/docs.yml) roda as mesmas validações em todo pull request.
