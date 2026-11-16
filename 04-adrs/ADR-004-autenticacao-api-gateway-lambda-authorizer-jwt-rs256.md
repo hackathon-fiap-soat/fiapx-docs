@@ -28,7 +28,7 @@ Token:
 Validação em duas camadas:
 
 1. O `authorizer` valida assinatura, `iss`, `aud` e `exp` e repassa `user_id`, `email` e `name` no contexto. O API Gateway injeta esses valores nos headers `x-user-id`, `x-user-email` e `x-user-name` para o `video-api`.
-2. O `video-api` (`GatewayUserResolver`) lê os headers `x-user-*` e **revalida o JWT com a chave pública**, como defesa em profundidade.
+2. O `video-api` (`GatewayUserResolver`) lê os headers `x-user-*` e **revalida o JWT com a chave pública**, como defesa em profundidade. O authorizer (Node) e o `video-api` (Laravel) seguem as mesmas regras de validação e rodam os mesmos vetores de teste ([contrato do JWT](../contracts/jwt/README.md)): só `RS256`, `iss`, `aud`, `exp` obrigatório, tolerância de relógio de 30 s e claims `sub`, `email` e `name` obrigatórias.
 
 ![Sequência de cadastro e login](../diagramas/04-fluxos/seq-01-cadastro-e-login.png)
 

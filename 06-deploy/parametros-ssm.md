@@ -14,13 +14,15 @@ removida.
 |---|---|---|---|
 | `region` | região da AWS | `fiapx-infra` | todos |
 | `vpc/private_subnet_ids` | subnets privadas | `fiapx-infra` | `fiapx-auth`, `fiapx-notification` (Lambdas na VPC) |
+| `vpc/lambda_security_group_id` | security group das Lambdas na VPC (o do Aurora aceita conexões dele) | `fiapx-infra` | `fiapx-auth`, `fiapx-notification` |
 | `eks/cluster_name` | nome do cluster | `fiapx-infra` | `fiapx-video-api`, `fiapx-video-processor` (deploy) |
 | `aurora/endpoint`, `aurora/port` | endereço do banco | `fiapx-infra` | `fiapx-auth`, `fiapx-video-api` |
 | `aurora/secret_arn` | segredo do usuário master | `fiapx-infra` | só o `fiapx-infra` (criação dos databases) |
 | `db/auth/secret_arn` | segredo do usuário `fiapx_auth` | `fiapx-infra` | `fiapx-auth` |
 | `db/video/secret_arn` | segredo do usuário `fiapx_video` | `fiapx-infra` | `fiapx-video-api` |
 | `auth/jwt_private_key_secret_arn` | segredo da chave privada RSA | `fiapx-infra` | Lambdas `login` e `password` |
-| `auth/jwt_public_key` | chave pública RSA (PEM) | `fiapx-infra` | Lambda `authorizer`, `fiapx-video-api` |
+| `auth/jwt_public_key` | chave pública RSA (PEM) | `fiapx-infra` | Lambda `authorizer` (o Terraform passa por variável de ambiente), `fiapx-video-api` |
+| `auth/authorizer_id` | id do Lambda Authorizer no HTTP API | `fiapx-auth` | `fiapx-video-api` (rotas `/api/videos*`) |
 | `s3/videos_bucket` | bucket de vídeos | `fiapx-infra` | `fiapx-video-api`, `fiapx-video-processor` |
 | `sqs/video-uploaded/url`, `/arn` | fila de eventos do S3 | `fiapx-infra` | `fiapx-video-api` |
 | `sqs/processing-commands/url`, `/arn` | fila de comandos do worker | `fiapx-infra` | `fiapx-video-api`, `fiapx-video-processor` |
