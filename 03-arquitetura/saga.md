@@ -11,7 +11,7 @@ no `fiapx-video-api`: o agregado `ProcessingSaga` guarda o estado na tabela
 
 | # | Passo | Participante | Ação | Sucesso | Falha | Compensação |
 |---|---|---|---|---|---|---|
-| 1 | `ValidateUpload` | video-api (local) | `HeadObject`: o objeto existe, tamanho ≤ 500 MB, extensão e MIME permitidos (mp4, avi, mov, mkv, wmv, flv, webm) | segue | `FAILED` (`INVALID_UPLOAD`) | `DeleteUploadedObject` |
+| 1 | `ValidateUpload` | video-api (local) | `HeadObject`: o objeto existe, tamanho ≤ 500 MB, extensão permitida (mp4, avi, mov, mkv, wmv, flv, webm) e MIME `video/*` ou `application/octet-stream` (navegadores nem sempre reconhecem mkv, flv e wmv) | segue | `FAILED` (`INVALID_UPLOAD`) | `DeleteUploadedObject` |
 | 2 | `ReserveQuota` | video-api (local) | Reserva 1 vaga na cota de processamentos simultâneos do usuário (padrão 5) | segue | `FAILED` (`QUOTA_EXCEEDED`) | `ReleaseQuota` |
 | 3 | `ProcessVideo` | video-processor | Comando na fila `processing-commands` | `VideoProcessed` | `VideoProcessingFailed` ou timeout (30 min) | `CleanupArtifacts` (apaga `results/{id}/` parcial) |
 | 4 | `CompleteVideo` | video-api (local) | `COMPLETED`, grava `zip_key` e `frame_count`, libera a cota | — | — | — (**ponto sem retorno**) |
@@ -42,6 +42,9 @@ stateDiagram-v2
 
 Sequência feliz: `STARTED → UPLOAD_VALIDATED → QUOTA_RESERVED → PROCESSING_REQUESTED → PROCESSING →
 COMPLETED → NOTIFIED`. Falha: `COMPENSATING → COMPENSATED (vídeo FAILED) → NOTIFIED`.
+
+O `VIDEO_COMPLETED` é opcional e fica ligado por padrão (`FIAPX_NOTIFY_ON_COMPLETED=true` no `fiapx-video-api`).
+Desligado, a saga vai de `COMPLETED` direto para `NOTIFIED` ("sem e-mail de conclusão").
 
 Se o `NotificationFailed` chegar, a saga registra o erro no histórico e permanece em `COMPLETED` ou
 `COMPENSATED`; o alarme da DLQ avisa o time.
@@ -102,7 +105,7 @@ API (`failure_reason`) e nos templates de e-mail.
 | **Lock otimista** | `processing_sagas.version` impede que dois consumidores avancem a mesma saga ao mesmo tempo |
 | **Timeout** | `deadline_at` é preenchido quando a saga entra em `PROCESSING_REQUESTED` (agora + 30 min) e renovado no `ProcessingStarted`. `saga:check-timeouts` (a cada minuto) compensa as sagas `PROCESSING_REQUESTED` ou `PROCESSING` com prazo vencido. Isso cobre também a mensagem que foi para a DLQ antes de qualquer resposta |
 | **Worker idempotente** | Se `results/{video_id}/frames.zip` já existe, o worker responde `VideoProcessed` sem reprocessar |
-| **Correlação** | O `correlation_id` da saga é o id do evento do S3 que a iniciou, guardado em `processing_sagas.correlation_id` e copiado para todos os comandos, inclusive os disparados pelo timeout |
+| **Correlação** | O `correlation_id` da saga é o id do evento do S3 que a iniciou: o `MessageId` (UUID) da mensagem SQS que entregou o evento, já que o evento do S3 não tem um id em formato UUID. Fica em `processing_sagas.correlation_id` e é copiado para todos os comandos, inclusive os disparados pelo timeout. Numa notificação com mais de um registro, os demais recebem um UUID v5 derivado desse id |
 | **Limpeza** | `messaging:prune` (diário) apaga as mensagens da outbox já publicadas e os registros de `processed_messages` com mais de 7 dias. O SQS retém mensagens por no máximo 4 dias, então uma duplicata não chega depois disso |
 | **Expiração** | `videos:expire-pending` marca como `EXPIRED` os vídeos em `PENDING_UPLOAD` há mais de 1 hora |
 

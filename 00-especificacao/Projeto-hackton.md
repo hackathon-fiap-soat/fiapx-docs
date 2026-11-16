@@ -141,7 +141,7 @@ obrigatório (aprovação opcional), checks obrigatórios (testes + Sonar) e ace
 | 1 | `fiapx-docs` | Toda a documentação: Domain Storytelling, C4, sequência, ADRs, RFCs, fluxo de deploy, contratos de mensagens (JSON Schema), OpenAPI consolidado, documento de entrega | Markdown + Mermaid + JSON Schema |
 | 2 | `fiapx-infra` | VPC, EKS (com add-ons), Aurora, S3, SQS/DLQ, SES, ECR, API Gateway + VPC Link + ALB interno, Secrets, OIDC do GitHub, SSM outputs, ambiente local (docker-compose + LocalStack) | Terraform + Helm |
 | 3 | `fiapx-auth` | Lambdas de **register**, **login**, **password** (recuperação e troca de senha) e **authorizer**, rotas `/api/auth/*` no API Gateway, schema `fiapx_auth` | Node.js 24 + Terraform |
-| 4 | `fiapx-video-api` | Aplicação principal: gestão de vídeos, URLs pré-assinadas, listagem de status, download, **orquestrador da SAGA**, outbox, consumidores de eventos/respostas, schema `fiapx_video` | PHP 8.4.27 + Laravel 13 + Docker + manifests K8s |
+| 4 | `fiapx-video-api` | Aplicação principal: gestão de vídeos, URLs pré-assinadas, listagem de status, download, **orquestrador da SAGA**, outbox, consumidores de eventos/respostas, schema `fiapx_video`, rotas `/api/videos*` e role do Pod Identity (`infra/`) | PHP 8.4.27 + Laravel 13 + Docker + manifests K8s + Terraform |
 | 5 | `fiapx-video-processor` | Worker: consome `ProcessVideo`/`CleanupArtifacts`, baixa o vídeo, `ffmpeg` → frames → zip → S3, responde à SAGA | PHP 8.4.27 + Laravel 13 + ffmpeg + Docker + manifests K8s + KEDA |
 | 6 | `fiapx-notification` | Fila SQS própria → Lambda que envia e-mail via SES e registra cada envio no DynamoDB (chave = e-mail); responde à SAGA | Node.js 24 + DynamoDB + Terraform |
 | 7 | `fiapx-web` | Front-end mínimo: cadastro, login, upload (múltiplos vídeos), lista de status e download. Prompt de layout em [`Prompt-layout-web.md`](Prompt-layout-web.md) | React + Vite + TypeScript + Tailwind, S3 + CloudFront |
@@ -872,7 +872,8 @@ CREATE TABLE outbox_messages (
 CREATE TABLE processed_messages (
   message_id    CHAR(36)  NOT NULL PRIMARY KEY,
   type          VARCHAR(60) NOT NULL,
-  processed_at  TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+  processed_at  TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  KEY idx_processed_at (processed_at)            -- limpeza diária (messaging:prune)
 );
 ```
 
@@ -892,7 +893,7 @@ Node em `migrations/*.sql`. Também deve exportar um `schema.sql` consolidado pa
 | Camada | Instrumentação |
 |---|---|
 | EKS | `nri-bundle` (Helm) no `fiapx-infra`: infraestrutura, eventos e logs do cluster |
-| video-api / processor | agente **New Relic PHP** na imagem. Logs JSON (Monolog `JsonFormatter`) com `correlation_id`, `video_id`, `saga_id` e `user_id` |
+| video-api / processor | agente **New Relic PHP** na imagem (só há build para Alpine em x86_64: imagens `linux/amd64`). Logs JSON (Monolog `JsonFormatter`) com `correlation_id`, `video_id`, `saga_id` e `user_id` |
 | Lambdas | layer New Relic para Node.js + logs JSON |
 | SQS / Aurora / S3 | integração AWS ↔ New Relic (CloudWatch Metric Streams) |
 
@@ -929,7 +930,7 @@ mensagens por 10 min; erro 5xx > 2%; sagas vencidas > 0.
 | `fiapx-infra` | `fmt -check`, `validate`, `tflint`, `checkov`, `plan` comentado no PR | `apply` (environment `prod`) |
 | `fiapx-auth` / `fiapx-notification` | eslint, jest (cov ≥ 80%), Sonar, `terraform plan` | build do zip → `terraform apply` → smoke test (`/api/auth/login`; na notification, envio para `success@simulator.amazonses.com` e conferência do item no DynamoDB) |
 | `fiapx-web` | eslint, vitest (cov ≥ 80%), Sonar, build | build → `s3 sync` → invalidação do CloudFront → Playwright smoke na URL pública |
-| `fiapx-video-api` | pint, phpstan (nível 6+), phpunit (cov ≥ 80%, MySQL como service container), behat (SAGA), Sonar, build + Trivy | push no ECR → Job `migrate` → `kustomize edit set image` → `kubectl apply -k` → `rollout status` → smoke test (`/api/health/ready` via gateway) |
+| `fiapx-video-api` | pint, phpstan (nível 6+), phpunit (cov ≥ 80%, com MySQL e LocalStack do `fiapx-infra/local`), behat (SAGA), Sonar, build + Trivy, kustomize + kubeconform, `terraform plan` do `infra/` | `terraform apply` do `infra/` (rotas e role) → push no ECR → Job `migrate` → `kustomize edit set image` → `kubectl apply -k` → `rollout status` → smoke test (`/api/health/ready` via gateway) |
 | `fiapx-video-processor` | pint, phpstan, phpunit (inclui integração com `ffmpeg` real e um vídeo de 3 s em `tests/fixtures`), Sonar, build + Trivy | push no ECR → `kustomize edit set image` → `kubectl apply -k` → `rollout status` |
 
 ### 11.3 Ordem de deploy (primeira subida)
@@ -1026,6 +1027,8 @@ antes de continuar.
   (use cases com Mockery) → Infrastructure (Eloquent, S3, SQS, outbox) → Presentation (controllers,
   requests, commands) → BDD (Behat) da SAGA → OpenAPI → Dockerfile → `k8s/`.
 - **DoD:** cobertura ≥ 80%; os cenários BDD do §6.4 passam; o fluxo local funciona com o processor simulado.
+- ✅ Concluída em 2026-11-16 (fiapx-video-api#6): 111 testes (92% de linhas), 7 cenários Behat, fluxo local
+  ponta a ponta com `processor:simulate`, imagem `linux/amd64`, Kustomize e `infra/` (rotas e Pod Identity).
 
 ### Etapa 5 — fiapx-video-processor
 

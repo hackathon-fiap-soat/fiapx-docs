@@ -15,7 +15,7 @@ removida.
 | `region` | região da AWS | `fiapx-infra` | todos |
 | `vpc/private_subnet_ids` | subnets privadas | `fiapx-infra` | `fiapx-auth`, `fiapx-notification` (Lambdas na VPC) |
 | `vpc/lambda_security_group_id` | security group das Lambdas na VPC (o do Aurora aceita conexões dele) | `fiapx-infra` | `fiapx-auth`, `fiapx-notification` |
-| `eks/cluster_name` | nome do cluster | `fiapx-infra` | `fiapx-video-api`, `fiapx-video-processor` (deploy) |
+| `eks/cluster_name` | nome do cluster | `fiapx-infra` | `fiapx-video-api`, `fiapx-video-processor` (deploy e associação do Pod Identity) |
 | `aurora/endpoint`, `aurora/port` | endereço do banco | `fiapx-infra` | `fiapx-auth`, `fiapx-video-api` |
 | `aurora/secret_arn` | segredo do usuário master | `fiapx-infra` | só o `fiapx-infra` (criação dos databases) |
 | `db/auth/secret_arn` | segredo do usuário `fiapx_auth` | `fiapx-infra` | `fiapx-auth` |
@@ -34,6 +34,7 @@ removida.
 | `ses/configuration_set` | configuration set do SES | `fiapx-infra` | `fiapx-notification` |
 | `apigw/api_id`, `apigw/vpc_link_id` | API Gateway e VPC Link | `fiapx-infra` | `fiapx-auth` (rotas), `fiapx-video-api` (integração) |
 | `alb/target_group_arn` | target group do ALB interno | `fiapx-infra` | `fiapx-video-api` (`TargetGroupBinding`) |
+| `alb/listener_arn` | listener do ALB interno | `fiapx-infra` | `fiapx-video-api` (integração das rotas pelo VPC Link) |
 | `ecr/<repo>/url` | repositório de imagens | `fiapx-infra` | `fiapx-video-api`, `fiapx-video-processor` |
 | `web/bucket`, `web/cloudfront_distribution_id` | hospedagem do front | `fiapx-infra` | `fiapx-web` |
 | `web/url` | URL pública do front | `fiapx-infra` | `fiapx-auth` (link de redefinição), `fiapx-notification` (links dos e-mails) |
