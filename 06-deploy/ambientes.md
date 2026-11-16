@@ -10,17 +10,28 @@ Não há ambiente de homologação: o custo do EKS, do NAT e do Aurora dobraria.
 
 ## Local
 
-Definido em `fiapx-infra/local/docker-compose.yml` (Etapa 2).
+Definido em `fiapx-infra/local/docker-compose.yml`. Como subir, credenciais e a lista completa de
+recursos estão no [README do `fiapx-infra`](https://github.com/hackathon-fiap-soat/fiapx-infra#como-rodar-o-ambiente-local).
 
-| Serviço | Imagem | Substitui |
-|---|---|---|
-| MySQL | `mysql:8.0` | Aurora MySQL |
-| LocalStack | `localstack/localstack` (S3, SQS, SES, SSM, Secrets Manager, DynamoDB) | Serviços AWS |
-| Mailpit | `axllent/mailpit` | Caixa de entrada (o `fiapx-notification` usa `EMAIL_DRIVER=smtp`) |
+```bash
+cd fiapx-infra/local
+docker compose up -d --wait   # sobe e espera os scripts de init
+./scripts/verificar.sh        # confere os recursos e roda o teste de fumaça
+```
 
-Os scripts de `fiapx-infra/local/init/` criam o bucket, as filas e DLQs, a notificação S3 → SQS, os
-databases e os parâmetros SSM com os mesmos nomes de produção (`/fiapx/local/...`). Assim o código é o
-mesmo nos dois ambientes; só muda o endpoint da AWS.
+| Serviço | Imagem | Substitui | Endereço |
+|---|---|---|---|
+| MySQL | `mysql:8.0` | Aurora MySQL | `localhost:3306` |
+| LocalStack | `localstack/localstack:4.14.0` (S3, SQS, SES, SSM, Secrets Manager, DynamoDB, Lambda, API Gateway, IAM) | Serviços AWS | `http://localhost:4566` |
+| Mailpit | `axllent/mailpit:v1.33.1` | Caixa de entrada (o `fiapx-notification` usa `EMAIL_DRIVER=smtp`) | UI `http://localhost:8025`, SMTP `localhost:1025` |
+
+O LocalStack está fixado na `4.14.0`, a última versão Community que roda sem `LOCALSTACK_AUTH_TOKEN`
+(as versões `2026.x` exigem conta). Ele não guarda estado: os recursos são recriados a cada subida.
+
+Os scripts de `fiapx-infra/local/init/` rodam o mesmo `sql/create-databases.sql` da AWS e criam o bucket,
+as filas e DLQs, a notificação S3 → SQS, a tabela de notificações, os segredos e os
+[parâmetros SSM](parametros-ssm.md) com os mesmos nomes de produção (`/fiapx/local/...`). Assim o código
+é o mesmo nos dois ambientes; só muda o endpoint da AWS (`AWS_ENDPOINT_URL=http://localhost:4566`).
 
 O EKS não é simulado localmente: o `video-api` e o `video-processor` rodam como containers no compose
 (ou direto com `php artisan`), e o KEDA só é exercitado em `prod`.

@@ -43,6 +43,7 @@ A documentação vem antes do código: os outros repositórios implementam o que
 
 - [Fluxo de deploy](06-deploy/fluxo-de-deploy.md): pipelines, ordem entre repositórios e rollback
 - [Ambientes](06-deploy/ambientes.md): local e produção, custos e destroy
+- [Parâmetros SSM e segredos](06-deploy/parametros-ssm.md): chaves que ligam os repositórios
 - [Observabilidade](07-observabilidade/observabilidade.md) e
   [dashboard do New Relic](07-observabilidade/newrelic-dashboard.json)
 

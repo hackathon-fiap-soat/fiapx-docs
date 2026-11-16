@@ -29,6 +29,8 @@ A integração entre repositórios é feita pelo **AWS SSM Parameter Store**, no
 
 - O `fiapx-infra` publica as saídas pelo módulo `ssm-outputs`: `/fiapx/prod/vpc/private_subnet_ids`, `/fiapx/prod/eks/cluster_name`, `/fiapx/prod/aurora/endpoint`, `/fiapx/prod/aurora/secret_arn`, `/fiapx/prod/s3/videos_bucket`, `/fiapx/prod/sqs/<fila>/url`, `/fiapx/prod/sqs/<fila>/arn`, `/fiapx/prod/apigw/api_id`, `/fiapx/prod/apigw/vpc_link_id`, `/fiapx/prod/alb/target_group_arn`, `/fiapx/prod/ecr/<repo>/url`, `/fiapx/prod/ses/from_address`, `/fiapx/prod/web/bucket`, `/fiapx/prod/web/url`, entre outros.
 - Um serviço também pode publicar: o `fiapx-notification` publica `/fiapx/prod/sqs/notification-commands/url`, que o `fiapx-video-api` lê.
+- O catálogo completo, com quem publica e quem lê cada chave, está em
+  [Parâmetros SSM e segredos](../06-deploy/parametros-ssm.md).
 - O Terraform dos serviços lê esses valores com `data "aws_ssm_parameter"`. **Não usamos `terraform_remote_state`.**
 - Os manifests Kubernetes ficam no repositório de cada serviço (`k8s/`). O `fiapx-infra` cria só o cluster e os add-ons compartilhados.
 
