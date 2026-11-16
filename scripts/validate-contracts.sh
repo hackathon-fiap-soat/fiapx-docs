@@ -1,13 +1,13 @@
 #!/usr/bin/env bash
 # Compila os JSON Schemas de contracts/ (modo estrito) e valida cada exemplo contra o seu schema.
-# Convenção: contracts/examples/<nome>.json é validado contra contracts/<nome>.schema.json.
+# Convenção: contracts/examples/<nome>[--<variante>].json é validado contra contracts/<nome>.schema.json.
 set -euo pipefail
 cd "$(dirname "$0")/../contracts"
 AJV="npx -y -p ajv-cli@5 -p ajv-formats@3 ajv"
 fail=0
 $AJV compile --spec=draft2020 --strict=true -c ajv-formats -s envelope.schema.json >/dev/null || fail=1
 for ex in examples/*.json; do
-  name=$(basename "$ex" .json)
+  name=$(basename "$ex" .json); name=${name%%--*}   # exemplos extras: <nome>--<variante>.json
   schema="$name.schema.json"
   if [ ! -f "$schema" ]; then echo "ERRO  sem schema para $ex"; fail=1; continue; fi
   refs=(); [ "$schema" != envelope.schema.json ] && refs=(-r envelope.schema.json)

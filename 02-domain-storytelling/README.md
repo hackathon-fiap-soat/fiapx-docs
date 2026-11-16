@@ -1,6 +1,6 @@
 # Domain Storytelling
 
-Cinco histórias descrevem, na linguagem do negócio, como as pessoas e os sistemas colaboram na
+Seis histórias descrevem, na linguagem do negócio, como as pessoas e os sistemas colaboram na
 plataforma FIAP X. Elas foram a base para identificar os bounded contexts e a linguagem ubíqua.
 
 | # | História | Bounded contexts envolvidos |
@@ -10,6 +10,7 @@ plataforma FIAP X. Elas foram a base para identificar os bounded contexts e a li
 | 3 | [Processamento com sucesso](ds-03-processamento-com-sucesso.md) | Gestão de Vídeos, Processamento |
 | 4 | [Falha e notificação](ds-04-falha-e-notificacao.md) | Gestão de Vídeos, Processamento, Notificação |
 | 5 | [Consulta de status e download](ds-05-consulta-status-e-download.md) | Identidade, Gestão de Vídeos |
+| 6 | [Recuperação e troca de senha](ds-06-recuperacao-e-troca-de-senha.md) | Identidade, Notificação |
 
 ## Notação
 

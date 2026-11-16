@@ -25,13 +25,9 @@ Se o site e a API ficarem em domínios diferentes, cada chamada do navegador vir
 - **Testes:** Vitest + Testing Library (cobertura ≥ 80%) e um E2E com Playwright (login → upload → status).
 - **Deploy:** `npm run build` → `aws s3 sync dist/` para o bucket → invalidação do CloudFront → Playwright smoke na URL pública.
 
-```mermaid
-flowchart LR
-  U["Navegador"] -->|"HTTPS"| CF["CloudFront"]
-  CF -->|"/*"| SITE[("S3 site, privado com OAC")]
-  CF -->|"/api/*"| GW["API Gateway HTTP API"]
-  U -->|"POST pré-assinado, único caso com CORS"| VID[("S3 fiapx-videos")]
-```
+![Caminho síncrono: CloudFront, API Gateway e API](../diagramas/03-arquitetura/c4-containers-sincrono.png)
+
+Diagrama mantido em [c4-containers.md](../03-arquitetura/c4-containers.md#caminho-síncrono-navegador-autenticação-e-api).
 
 ## Alternativas consideradas
 

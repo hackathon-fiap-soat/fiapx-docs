@@ -1,249 +1,83 @@
 # Imagens dos diagramas
 
-Imagens geradas automaticamente a partir dos blocos Mermaid da documentação, para usar no documento
-de entrega, em slides e no vídeo. **Não edite estes arquivos à mão**: altere o diagrama no Markdown de
-origem e rode `python3 scripts/render-diagrams.py`.
+Imagens geradas a partir dos blocos Mermaid da documentação, organizadas por assunto e na ordem de
+leitura, para usar no documento de entrega, em slides e no vídeo. **Não edite estes arquivos à mão**:
+altere o diagrama no Markdown de origem e rode `python3 scripts/render-diagrams.py`.
 
-Total: 39 diagramas, cada um em PNG (escala 2x, fundo branco) e SVG.
+Total: 31 diagramas, cada um em PNG (escala 2x, fundo branco) e SVG.
 
-## Linguagem ubíqua
+## Contexto
 
-Origem: [`01-contexto/linguagem-ubiqua.md`](../01-contexto/linguagem-ubiqua.md)
-
-| Diagrama | PNG | SVG |
+| Diagrama | Imagens | Origem |
 |---|---|---|
-| Mapa de contextos | [01-contexto__linguagem-ubiqua-01.png](01-contexto__linguagem-ubiqua-01.png) | [01-contexto__linguagem-ubiqua-01.svg](01-contexto__linguagem-ubiqua-01.svg) |
+| C4 nível 1: contexto do sistema | [PNG](01-contexto/c4-contexto.png) · [SVG](01-contexto/c4-contexto.svg) | [`03-arquitetura/c4-contexto.md`](../03-arquitetura/c4-contexto.md) |
+| Mapa de contextos (bounded contexts) | [PNG](01-contexto/mapa-de-contextos.png) · [SVG](01-contexto/mapa-de-contextos.svg) | [`01-contexto/linguagem-ubiqua.md`](../01-contexto/linguagem-ubiqua.md) |
 
-## DS-01 — Cadastro e login
+## Domínio (Domain Storytelling)
 
-Origem: [`02-domain-storytelling/ds-01-cadastro-e-login.md`](../02-domain-storytelling/ds-01-cadastro-e-login.md)
-
-| Diagrama | PNG | SVG |
+| Diagrama | Imagens | Origem |
 |---|---|---|
-| Diagrama | [02-domain-storytelling__ds-01-cadastro-e-login-01.png](02-domain-storytelling__ds-01-cadastro-e-login-01.png) | [02-domain-storytelling__ds-01-cadastro-e-login-01.svg](02-domain-storytelling__ds-01-cadastro-e-login-01.svg) |
+| DS-01 Cadastro e login | [PNG](02-dominio/ds-01-cadastro-e-login.png) · [SVG](02-dominio/ds-01-cadastro-e-login.svg) | [`02-domain-storytelling/ds-01-cadastro-e-login.md`](../02-domain-storytelling/ds-01-cadastro-e-login.md) |
+| DS-02 Envio de vídeo | [PNG](02-dominio/ds-02-envio-de-video.png) · [SVG](02-dominio/ds-02-envio-de-video.svg) | [`02-domain-storytelling/ds-02-envio-de-video.md`](../02-domain-storytelling/ds-02-envio-de-video.md) |
+| DS-03 Processamento com sucesso | [PNG](02-dominio/ds-03-processamento-com-sucesso.png) · [SVG](02-dominio/ds-03-processamento-com-sucesso.svg) | [`02-domain-storytelling/ds-03-processamento-com-sucesso.md`](../02-domain-storytelling/ds-03-processamento-com-sucesso.md) |
+| DS-04 Falha e notificação | [PNG](02-dominio/ds-04-falha-e-notificacao.png) · [SVG](02-dominio/ds-04-falha-e-notificacao.svg) | [`02-domain-storytelling/ds-04-falha-e-notificacao.md`](../02-domain-storytelling/ds-04-falha-e-notificacao.md) |
+| DS-05 Consulta de status e download | [PNG](02-dominio/ds-05-consulta-status-e-download.png) · [SVG](02-dominio/ds-05-consulta-status-e-download.svg) | [`02-domain-storytelling/ds-05-consulta-status-e-download.md`](../02-domain-storytelling/ds-05-consulta-status-e-download.md) |
+| DS-06 Recuperação e troca de senha | [PNG](02-dominio/ds-06-recuperacao-e-troca-de-senha.png) · [SVG](02-dominio/ds-06-recuperacao-e-troca-de-senha.svg) | [`02-domain-storytelling/ds-06-recuperacao-e-troca-de-senha.md`](../02-domain-storytelling/ds-06-recuperacao-e-troca-de-senha.md) |
 
-## DS-02 — Envio de vídeo
+## Arquitetura
 
-Origem: [`02-domain-storytelling/ds-02-envio-de-video.md`](../02-domain-storytelling/ds-02-envio-de-video.md)
-
-| Diagrama | PNG | SVG |
+| Diagrama | Imagens | Origem |
 |---|---|---|
-| Diagrama | [02-domain-storytelling__ds-02-envio-de-video-01.png](02-domain-storytelling__ds-02-envio-de-video-01.png) | [02-domain-storytelling__ds-02-envio-de-video-01.svg](02-domain-storytelling__ds-02-envio-de-video-01.svg) |
+| C4 nível 3: componentes do fiapx-video-api | [PNG](03-arquitetura/c4-componentes-video-api.png) · [SVG](03-arquitetura/c4-componentes-video-api.svg) | [`03-arquitetura/c4-componentes-video-api.md`](../03-arquitetura/c4-componentes-video-api.md) |
+| C4 nível 2: processamento assíncrono (SAGA, worker e notificação) | [PNG](03-arquitetura/c4-containers-assincrono.png) · [SVG](03-arquitetura/c4-containers-assincrono.svg) | [`03-arquitetura/c4-containers.md`](../03-arquitetura/c4-containers.md) |
+| C4 nível 2: caminho síncrono (navegador, autenticação e API) | [PNG](03-arquitetura/c4-containers-sincrono.png) · [SVG](03-arquitetura/c4-containers-sincrono.svg) | [`03-arquitetura/c4-containers.md`](../03-arquitetura/c4-containers.md) |
+| Camadas DDD + Clean Architecture (ADR-003) | [PNG](03-arquitetura/camadas-clean-architecture.png) · [SVG](03-arquitetura/camadas-clean-architecture.svg) | [`04-adrs/ADR-003-ddd-e-clean-architecture-nos-servicos-laravel.md`](../04-adrs/ADR-003-ddd-e-clean-architecture-nos-servicos-laravel.md) |
+| Exposição da API: API Gateway, VPC Link e ALB interno (ADR-010) | [PNG](03-arquitetura/exposicao-da-api.png) · [SVG](03-arquitetura/exposicao-da-api.svg) | [`04-adrs/ADR-010-api-gateway-vpc-link-alb-interno-e-targetgroupbinding.md`](../04-adrs/ADR-010-api-gateway-vpc-link-alb-interno-e-targetgroupbinding.md) |
+| Integração entre repositórios via SSM Parameter Store (ADR-001) | [PNG](03-arquitetura/integracao-via-ssm.png) · [SVG](03-arquitetura/integracao-via-ssm.svg) | [`04-adrs/ADR-001-polyrepo-e-integracao-via-ssm-parameter-store.md`](../04-adrs/ADR-001-polyrepo-e-integracao-via-ssm-parameter-store.md) |
 
-## DS-03 — Processamento com sucesso
+## Fluxos (sequências)
 
-Origem: [`02-domain-storytelling/ds-03-processamento-com-sucesso.md`](../02-domain-storytelling/ds-03-processamento-com-sucesso.md)
-
-| Diagrama | PNG | SVG |
+| Diagrama | Imagens | Origem |
 |---|---|---|
-| Diagrama | [02-domain-storytelling__ds-03-processamento-com-sucesso-01.png](02-domain-storytelling__ds-03-processamento-com-sucesso-01.png) | [02-domain-storytelling__ds-03-processamento-com-sucesso-01.svg](02-domain-storytelling__ds-03-processamento-com-sucesso-01.svg) |
+| Fluxo de notificação: SQS, Lambda, DynamoDB e SES (ADR-013) | [PNG](04-fluxos/fluxo-de-notificacao.png) · [SVG](04-fluxos/fluxo-de-notificacao.svg) | [`04-adrs/ADR-013-notificacao-sqs-lambda-ses-e-historico-no-dynamodb.md`](../04-adrs/ADR-013-notificacao-sqs-lambda-ses-e-historico-no-dynamodb.md) |
+| Sequência 1: cadastro e login | [PNG](04-fluxos/seq-01-cadastro-e-login.png) · [SVG](04-fluxos/seq-01-cadastro-e-login.svg) | [`03-arquitetura/sequencias.md`](../03-arquitetura/sequencias.md) |
+| Sequência 2: upload e processamento com sucesso | [PNG](04-fluxos/seq-02-upload-e-processamento.png) · [SVG](04-fluxos/seq-02-upload-e-processamento.svg) | [`03-arquitetura/sequencias.md`](../03-arquitetura/sequencias.md) |
+| Sequência 3: falha no processamento com compensação | [PNG](04-fluxos/seq-03-falha-e-compensacao.png) · [SVG](04-fluxos/seq-03-falha-e-compensacao.svg) | [`03-arquitetura/sequencias.md`](../03-arquitetura/sequencias.md) |
+| Sequência 3b: timeout do processamento | [PNG](04-fluxos/seq-03b-timeout.png) · [SVG](04-fluxos/seq-03b-timeout.svg) | [`03-arquitetura/sequencias.md`](../03-arquitetura/sequencias.md) |
+| Sequência 4: consulta e download | [PNG](04-fluxos/seq-04-consulta-e-download.png) · [SVG](04-fluxos/seq-04-consulta-e-download.svg) | [`03-arquitetura/sequencias.md`](../03-arquitetura/sequencias.md) |
+| Sequência 5: recuperação e troca de senha | [PNG](04-fluxos/seq-05-recuperacao-e-troca-de-senha.png) · [SVG](04-fluxos/seq-05-recuperacao-e-troca-de-senha.svg) | [`03-arquitetura/sequencias.md`](../03-arquitetura/sequencias.md) |
 
-## DS-04 — Falha e notificação
+## SAGA
 
-Origem: [`02-domain-storytelling/ds-04-falha-e-notificacao.md`](../02-domain-storytelling/ds-04-falha-e-notificacao.md)
-
-| Diagrama | PNG | SVG |
+| Diagrama | Imagens | Origem |
 |---|---|---|
-| Diagrama | [02-domain-storytelling__ds-04-falha-e-notificacao-01.png](02-domain-storytelling__ds-04-falha-e-notificacao-01.png) | [02-domain-storytelling__ds-04-falha-e-notificacao-01.svg](02-domain-storytelling__ds-04-falha-e-notificacao-01.svg) |
+| Estados da saga | [PNG](05-saga/estados-da-saga.png) · [SVG](05-saga/estados-da-saga.svg) | [`03-arquitetura/saga.md`](../03-arquitetura/saga.md) |
 
-## DS-05 — Consulta de status e download
+## Dados
 
-Origem: [`02-domain-storytelling/ds-05-consulta-status-e-download.md`](../02-domain-storytelling/ds-05-consulta-status-e-download.md)
-
-| Diagrama | PNG | SVG |
+| Diagrama | Imagens | Origem |
 |---|---|---|
-| Diagrama | [02-domain-storytelling__ds-05-consulta-status-e-download-01.png](02-domain-storytelling__ds-05-consulta-status-e-download-01.png) | [02-domain-storytelling__ds-05-consulta-status-e-download-01.svg](02-domain-storytelling__ds-05-consulta-status-e-download-01.svg) |
+| Cluster Aurora com um database por serviço (ADR-005) | [PNG](06-dados/cluster-aurora.png) · [SVG](06-dados/cluster-aurora.svg) | [`04-adrs/ADR-005-aurora-mysql-serverless-v2-um-database-por-servico.md`](../04-adrs/ADR-005-aurora-mysql-serverless-v2-um-database-por-servico.md) |
+| Modelo ER: fiapx_auth e fiapx_video | [PNG](06-dados/modelo-er.png) · [SVG](06-dados/modelo-er.svg) | [`03-arquitetura/modelo-de-dados.md`](../03-arquitetura/modelo-de-dados.md) |
 
-## C4 — Nível 3: componentes do `fiapx-video-api`
+## Segurança, escala e e-mail
 
-Origem: [`03-arquitetura/c4-componentes-video-api.md`](../03-arquitetura/c4-componentes-video-api.md)
-
-| Diagrama | PNG | SVG |
+| Diagrama | Imagens | Origem |
 |---|---|---|
-| C4 — Nível 3: componentes do `fiapx-video-api` | [03-arquitetura__c4-componentes-video-api-01.png](03-arquitetura__c4-componentes-video-api-01.png) | [03-arquitetura__c4-componentes-video-api-01.svg](03-arquitetura__c4-componentes-video-api-01.svg) |
+| Escala do worker pelo KEDA | [PNG](07-seguranca-e-escala/escala-keda.png) · [SVG](07-seguranca-e-escala/escala-keda.svg) | [`03-arquitetura/escalabilidade-e-resiliencia.md`](../03-arquitetura/escalabilidade-e-resiliencia.md) |
+| Rede e segurança | [PNG](07-seguranca-e-escala/rede-e-seguranca.png) · [SVG](07-seguranca-e-escala/rede-e-seguranca.svg) | [`03-arquitetura/seguranca.md`](../03-arquitetura/seguranca.md) |
+| Remetente de e-mail: domínio, DKIM e SES (ADR-015) | [PNG](07-seguranca-e-escala/remetente-de-email-ses.png) · [SVG](07-seguranca-e-escala/remetente-de-email-ses.svg) | [`04-adrs/ADR-015-remetente-de-email-dominio-proprio-e-sandbox-do-ses.md`](../04-adrs/ADR-015-remetente-de-email-dominio-proprio-e-sandbox-do-ses.md) |
 
-## C4 — Nível 2: containers
+## Deploy
 
-Origem: [`03-arquitetura/c4-containers.md`](../03-arquitetura/c4-containers.md)
-
-| Diagrama | PNG | SVG |
+| Diagrama | Imagens | Origem |
 |---|---|---|
-| Caminho síncrono: navegador, autenticação e API | [03-arquitetura__c4-containers-01.png](03-arquitetura__c4-containers-01.png) | [03-arquitetura__c4-containers-01.svg](03-arquitetura__c4-containers-01.svg) |
-| Processamento assíncrono: SAGA, worker e notificação | [03-arquitetura__c4-containers-02.png](03-arquitetura__c4-containers-02.png) | [03-arquitetura__c4-containers-02.svg](03-arquitetura__c4-containers-02.svg) |
-
-## C4 — Nível 1: contexto
-
-Origem: [`03-arquitetura/c4-contexto.md`](../03-arquitetura/c4-contexto.md)
-
-| Diagrama | PNG | SVG |
-|---|---|---|
-| C4 — Nível 1: contexto | [03-arquitetura__c4-contexto-01.png](03-arquitetura__c4-contexto-01.png) | [03-arquitetura__c4-contexto-01.svg](03-arquitetura__c4-contexto-01.svg) |
-
-## Escalabilidade e resiliência
-
-Origem: [`03-arquitetura/escalabilidade-e-resiliencia.md`](../03-arquitetura/escalabilidade-e-resiliencia.md)
-
-| Diagrama | PNG | SVG |
-|---|---|---|
-| Escala por componente | [03-arquitetura__escalabilidade-e-resiliencia-01.png](03-arquitetura__escalabilidade-e-resiliencia-01.png) | [03-arquitetura__escalabilidade-e-resiliencia-01.svg](03-arquitetura__escalabilidade-e-resiliencia-01.svg) |
-
-## Modelo de dados
-
-Origem: [`03-arquitetura/modelo-de-dados.md`](../03-arquitetura/modelo-de-dados.md)
-
-| Diagrama | PNG | SVG |
-|---|---|---|
-| `fiapx_auth` | [03-arquitetura__modelo-de-dados-01.png](03-arquitetura__modelo-de-dados-01.png) | [03-arquitetura__modelo-de-dados-01.svg](03-arquitetura__modelo-de-dados-01.svg) |
-| `fiapx_video` | [03-arquitetura__modelo-de-dados-02.png](03-arquitetura__modelo-de-dados-02.png) | [03-arquitetura__modelo-de-dados-02.svg](03-arquitetura__modelo-de-dados-02.svg) |
-
-## SAGA orquestrada do processamento
-
-Origem: [`03-arquitetura/saga.md`](../03-arquitetura/saga.md)
-
-| Diagrama | PNG | SVG |
-|---|---|---|
-| Estados da saga | [03-arquitetura__saga-01.png](03-arquitetura__saga-01.png) | [03-arquitetura__saga-01.svg](03-arquitetura__saga-01.svg) |
-
-## Segurança
-
-Origem: [`03-arquitetura/seguranca.md`](../03-arquitetura/seguranca.md)
-
-| Diagrama | PNG | SVG |
-|---|---|---|
-| Visão geral | [03-arquitetura__seguranca-01.png](03-arquitetura__seguranca-01.png) | [03-arquitetura__seguranca-01.svg](03-arquitetura__seguranca-01.svg) |
-
-## Diagramas de sequência
-
-Origem: [`03-arquitetura/sequencias.md`](../03-arquitetura/sequencias.md)
-
-| Diagrama | PNG | SVG |
-|---|---|---|
-| 1. Cadastro e login | [03-arquitetura__sequencias-01.png](03-arquitetura__sequencias-01.png) | [03-arquitetura__sequencias-01.svg](03-arquitetura__sequencias-01.svg) |
-| 2. Upload e processamento com sucesso | [03-arquitetura__sequencias-02.png](03-arquitetura__sequencias-02.png) | [03-arquitetura__sequencias-02.svg](03-arquitetura__sequencias-02.svg) |
-| 3. Falha no processamento com compensação | [03-arquitetura__sequencias-03.png](03-arquitetura__sequencias-03.png) | [03-arquitetura__sequencias-03.svg](03-arquitetura__sequencias-03.svg) |
-| Timeout | [03-arquitetura__sequencias-04.png](03-arquitetura__sequencias-04.png) | [03-arquitetura__sequencias-04.svg](03-arquitetura__sequencias-04.svg) |
-| 4. Consulta e download | [03-arquitetura__sequencias-05.png](03-arquitetura__sequencias-05.png) | [03-arquitetura__sequencias-05.svg](03-arquitetura__sequencias-05.svg) |
-
-## ADR-001 — Um repositório por serviço (polyrepo) e comunicação entre repositórios via SSM Parameter Store
-
-Origem: [`04-adrs/ADR-001-polyrepo-e-integracao-via-ssm-parameter-store.md`](../04-adrs/ADR-001-polyrepo-e-integracao-via-ssm-parameter-store.md)
-
-| Diagrama | PNG | SVG |
-|---|---|---|
-| Decisão | [04-adrs__ADR-001-polyrepo-e-integracao-via-ssm-parameter-store-01.png](04-adrs__ADR-001-polyrepo-e-integracao-via-ssm-parameter-store-01.png) | [04-adrs__ADR-001-polyrepo-e-integracao-via-ssm-parameter-store-01.svg](04-adrs__ADR-001-polyrepo-e-integracao-via-ssm-parameter-store-01.svg) |
-
-## ADR-003 — DDD + Clean Architecture nos serviços Laravel
-
-Origem: [`04-adrs/ADR-003-ddd-e-clean-architecture-nos-servicos-laravel.md`](../04-adrs/ADR-003-ddd-e-clean-architecture-nos-servicos-laravel.md)
-
-| Diagrama | PNG | SVG |
-|---|---|---|
-| Decisão | [04-adrs__ADR-003-ddd-e-clean-architecture-nos-servicos-laravel-01.png](04-adrs__ADR-003-ddd-e-clean-architecture-nos-servicos-laravel-01.png) | [04-adrs__ADR-003-ddd-e-clean-architecture-nos-servicos-laravel-01.svg](04-adrs__ADR-003-ddd-e-clean-architecture-nos-servicos-laravel-01.svg) |
-
-## ADR-004 — Autenticação com API Gateway + Lambda Node.js + Lambda Authorizer e JWT RS256
-
-Origem: [`04-adrs/ADR-004-autenticacao-api-gateway-lambda-authorizer-jwt-rs256.md`](../04-adrs/ADR-004-autenticacao-api-gateway-lambda-authorizer-jwt-rs256.md)
-
-| Diagrama | PNG | SVG |
-|---|---|---|
-| Decisão | [04-adrs__ADR-004-autenticacao-api-gateway-lambda-authorizer-jwt-rs256-01.png](04-adrs__ADR-004-autenticacao-api-gateway-lambda-authorizer-jwt-rs256-01.png) | [04-adrs__ADR-004-autenticacao-api-gateway-lambda-authorizer-jwt-rs256-01.svg](04-adrs__ADR-004-autenticacao-api-gateway-lambda-authorizer-jwt-rs256-01.svg) |
-
-## ADR-005 — Aurora MySQL Serverless v2 com um database por serviço no mesmo cluster
-
-Origem: [`04-adrs/ADR-005-aurora-mysql-serverless-v2-um-database-por-servico.md`](../04-adrs/ADR-005-aurora-mysql-serverless-v2-um-database-por-servico.md)
-
-| Diagrama | PNG | SVG |
-|---|---|---|
-| Decisão | [04-adrs__ADR-005-aurora-mysql-serverless-v2-um-database-por-servico-01.png](04-adrs__ADR-005-aurora-mysql-serverless-v2-um-database-por-servico-01.png) | [04-adrs__ADR-005-aurora-mysql-serverless-v2-um-database-por-servico-01.svg](04-adrs__ADR-005-aurora-mysql-serverless-v2-um-database-por-servico-01.svg) |
-
-## ADR-006 — Upload direto ao S3 via POST pré-assinado e início da SAGA pelo evento do S3
-
-Origem: [`04-adrs/ADR-006-upload-direto-s3-e-inicio-da-saga-pelo-evento.md`](../04-adrs/ADR-006-upload-direto-s3-e-inicio-da-saga-pelo-evento.md)
-
-| Diagrama | PNG | SVG |
-|---|---|---|
-| 2. A SAGA começa pelo evento do S3, não por uma chamada do cliente | [04-adrs__ADR-006-upload-direto-s3-e-inicio-da-saga-pelo-evento-01.png](04-adrs__ADR-006-upload-direto-s3-e-inicio-da-saga-pelo-evento-01.png) | [04-adrs__ADR-006-upload-direto-s3-e-inicio-da-saga-pelo-evento-01.svg](04-adrs__ADR-006-upload-direto-s3-e-inicio-da-saga-pelo-evento-01.svg) |
-
-## ADR-008 — SAGA orquestrada no video-api com transactional outbox e consumidores idempotentes
-
-Origem: [`04-adrs/ADR-008-saga-orquestrada-com-outbox-e-consumidores-idempotentes.md`](../04-adrs/ADR-008-saga-orquestrada-com-outbox-e-consumidores-idempotentes.md)
-
-| Diagrama | PNG | SVG |
-|---|---|---|
-| Decisão | [04-adrs__ADR-008-saga-orquestrada-com-outbox-e-consumidores-idempotentes-01.png](04-adrs__ADR-008-saga-orquestrada-com-outbox-e-consumidores-idempotentes-01.png) | [04-adrs__ADR-008-saga-orquestrada-com-outbox-e-consumidores-idempotentes-01.svg](04-adrs__ADR-008-saga-orquestrada-com-outbox-e-consumidores-idempotentes-01.svg) |
-
-## ADR-009 — Worker Laravel no EKS escalado por KEDA (1 vídeo por pod, heartbeat de visibility)
-
-Origem: [`04-adrs/ADR-009-worker-laravel-no-eks-escalado-por-keda.md`](../04-adrs/ADR-009-worker-laravel-no-eks-escalado-por-keda.md)
-
-| Diagrama | PNG | SVG |
-|---|---|---|
-| Decisão | [04-adrs__ADR-009-worker-laravel-no-eks-escalado-por-keda-01.png](04-adrs__ADR-009-worker-laravel-no-eks-escalado-por-keda-01.png) | [04-adrs__ADR-009-worker-laravel-no-eks-escalado-por-keda-01.svg](04-adrs__ADR-009-worker-laravel-no-eks-escalado-por-keda-01.svg) |
-
-## ADR-010 — Exposição da API: API Gateway → VPC Link → ALB interno + TargetGroupBinding
-
-Origem: [`04-adrs/ADR-010-api-gateway-vpc-link-alb-interno-e-targetgroupbinding.md`](../04-adrs/ADR-010-api-gateway-vpc-link-alb-interno-e-targetgroupbinding.md)
-
-| Diagrama | PNG | SVG |
-|---|---|---|
-| Decisão | [04-adrs__ADR-010-api-gateway-vpc-link-alb-interno-e-targetgroupbinding-01.png](04-adrs__ADR-010-api-gateway-vpc-link-alb-interno-e-targetgroupbinding-01.png) | [04-adrs__ADR-010-api-gateway-vpc-link-alb-interno-e-targetgroupbinding-01.svg](04-adrs__ADR-010-api-gateway-vpc-link-alb-interno-e-targetgroupbinding-01.svg) |
-
-## ADR-012 — CI/CD com GitHub Actions + OIDC e ordem de deploy entre repositórios
-
-Origem: [`04-adrs/ADR-012-ci-cd-com-github-actions-oidc-e-ordem-de-deploy.md`](../04-adrs/ADR-012-ci-cd-com-github-actions-oidc-e-ordem-de-deploy.md)
-
-| Diagrama | PNG | SVG |
-|---|---|---|
-| Ordem de deploy (primeira subida) | [04-adrs__ADR-012-ci-cd-com-github-actions-oidc-e-ordem-de-deploy-01.png](04-adrs__ADR-012-ci-cd-com-github-actions-oidc-e-ordem-de-deploy-01.png) | [04-adrs__ADR-012-ci-cd-com-github-actions-oidc-e-ordem-de-deploy-01.svg](04-adrs__ADR-012-ci-cd-com-github-actions-oidc-e-ordem-de-deploy-01.svg) |
-
-## ADR-013 — Notificação: SQS → Lambda Node.js → SES, com histórico e idempotência no DynamoDB (PK `email`, SK `message_id`)
-
-Origem: [`04-adrs/ADR-013-notificacao-sqs-lambda-ses-e-historico-no-dynamodb.md`](../04-adrs/ADR-013-notificacao-sqs-lambda-ses-e-historico-no-dynamodb.md)
-
-| Diagrama | PNG | SVG |
-|---|---|---|
-| Regras | [04-adrs__ADR-013-notificacao-sqs-lambda-ses-e-historico-no-dynamodb-01.png](04-adrs__ADR-013-notificacao-sqs-lambda-ses-e-historico-no-dynamodb-01.png) | [04-adrs__ADR-013-notificacao-sqs-lambda-ses-e-historico-no-dynamodb-01.svg](04-adrs__ADR-013-notificacao-sqs-lambda-ses-e-historico-no-dynamodb-01.svg) |
-
-## ADR-014 — Front-end React + Vite em S3 + CloudFront, com `/api/*` na mesma origem
-
-Origem: [`04-adrs/ADR-014-front-end-react-vite-em-s3-cloudfront-mesma-origem.md`](../04-adrs/ADR-014-front-end-react-vite-em-s3-cloudfront-mesma-origem.md)
-
-| Diagrama | PNG | SVG |
-|---|---|---|
-| Decisão | [04-adrs__ADR-014-front-end-react-vite-em-s3-cloudfront-mesma-origem-01.png](04-adrs__ADR-014-front-end-react-vite-em-s3-cloudfront-mesma-origem-01.png) | [04-adrs__ADR-014-front-end-react-vite-em-s3-cloudfront-mesma-origem-01.svg](04-adrs__ADR-014-front-end-react-vite-em-s3-cloudfront-mesma-origem-01.svg) |
-
-## ADR-015 — Remetente de e-mail: domínio próprio no Route 53 com DKIM/SPF/DMARC e uso do sandbox do SES
-
-Origem: [`04-adrs/ADR-015-remetente-de-email-dominio-proprio-e-sandbox-do-ses.md`](../04-adrs/ADR-015-remetente-de-email-dominio-proprio-e-sandbox-do-ses.md)
-
-| Diagrama | PNG | SVG |
-|---|---|---|
-| Sandbox do SES | [04-adrs__ADR-015-remetente-de-email-dominio-proprio-e-sandbox-do-ses-01.png](04-adrs__ADR-015-remetente-de-email-dominio-proprio-e-sandbox-do-ses-01.png) | [04-adrs__ADR-015-remetente-de-email-dominio-proprio-e-sandbox-do-ses-01.svg](04-adrs__ADR-015-remetente-de-email-dominio-proprio-e-sandbox-do-ses-01.svg) |
-
-## ADR-016 — `terraform apply` somente via GitHub Actions; apply local apenas para testes (§11.5)
-
-Origem: [`04-adrs/ADR-016-terraform-apply-somente-via-github-actions.md`](../04-adrs/ADR-016-terraform-apply-somente-via-github-actions.md)
-
-| Diagrama | PNG | SVG |
-|---|---|---|
-| Bloqueios | [04-adrs__ADR-016-terraform-apply-somente-via-github-actions-01.png](04-adrs__ADR-016-terraform-apply-somente-via-github-actions-01.png) | [04-adrs__ADR-016-terraform-apply-somente-via-github-actions-01.svg](04-adrs__ADR-016-terraform-apply-somente-via-github-actions-01.svg) |
-
-## Fluxo de deploy
-
-Origem: [`06-deploy/fluxo-de-deploy.md`](../06-deploy/fluxo-de-deploy.md)
-
-| Diagrama | PNG | SVG |
-|---|---|---|
-| Aplicações no EKS (`fiapx-video-api` e `fiapx-video-processor`) | [06-deploy__fluxo-de-deploy-01.png](06-deploy__fluxo-de-deploy-01.png) | [06-deploy__fluxo-de-deploy-01.svg](06-deploy__fluxo-de-deploy-01.svg) |
-| Lambdas com Terraform (`fiapx-auth` e `fiapx-notification`) | [06-deploy__fluxo-de-deploy-02.png](06-deploy__fluxo-de-deploy-02.png) | [06-deploy__fluxo-de-deploy-02.svg](06-deploy__fluxo-de-deploy-02.svg) |
-| Infraestrutura (`fiapx-infra`) | [06-deploy__fluxo-de-deploy-03.png](06-deploy__fluxo-de-deploy-03.png) | [06-deploy__fluxo-de-deploy-03.svg](06-deploy__fluxo-de-deploy-03.svg) |
-| Front-end (`fiapx-web`) | [06-deploy__fluxo-de-deploy-04.png](06-deploy__fluxo-de-deploy-04.png) | [06-deploy__fluxo-de-deploy-04.svg](06-deploy__fluxo-de-deploy-04.svg) |
-| Ordem entre repositórios (primeira subida) | [06-deploy__fluxo-de-deploy-05.png](06-deploy__fluxo-de-deploy-05.png) | [06-deploy__fluxo-de-deploy-05.svg](06-deploy__fluxo-de-deploy-05.svg) |
+| Ordem de deploy entre repositórios (primeira subida) | [PNG](08-deploy/ordem-de-deploy.png) · [SVG](08-deploy/ordem-de-deploy.svg) | [`06-deploy/fluxo-de-deploy.md`](../06-deploy/fluxo-de-deploy.md) |
+| Pipelines por tipo de repositório | [PNG](08-deploy/pipelines.png) · [SVG](08-deploy/pipelines.svg) | [`06-deploy/fluxo-de-deploy.md`](../06-deploy/fluxo-de-deploy.md) |
+| Política de terraform apply (ADR-016) | [PNG](08-deploy/politica-terraform-apply.png) · [SVG](08-deploy/politica-terraform-apply.svg) | [`04-adrs/ADR-016-terraform-apply-somente-via-github-actions.md`](../04-adrs/ADR-016-terraform-apply-somente-via-github-actions.md) |
 
 ## Observabilidade
 
-Origem: [`07-observabilidade/observabilidade.md`](../07-observabilidade/observabilidade.md)
-
-| Diagrama | PNG | SVG |
+| Diagrama | Imagens | Origem |
 |---|---|---|
-| Visão geral | [07-observabilidade__observabilidade-01.png](07-observabilidade__observabilidade-01.png) | [07-observabilidade__observabilidade-01.svg](07-observabilidade__observabilidade-01.svg) |
+| Fluxo de telemetria para o New Relic | [PNG](09-observabilidade/fluxo-de-telemetria.png) · [SVG](09-observabilidade/fluxo-de-telemetria.svg) | [`07-observabilidade/observabilidade.md`](../07-observabilidade/observabilidade.md) |

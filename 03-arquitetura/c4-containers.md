@@ -15,12 +15,14 @@ flowchart LR
   subgraph Auth["fiapx-auth"]
     LREG["Lambda register"]
     LLOGIN["Lambda login"]
+    LPASS["Lambda password"]
     LAUTHZ["Lambda authorizer"]
   end
 
-  APIGW -->|"/api/auth/*"| LREG & LLOGIN
+  APIGW -->|"/api/auth/*"| LREG & LLOGIN & LPASS
   APIGW -. "valida JWT" .-> LAUTHZ
-  LREG & LLOGIN --> AURORA_AUTH[("Aurora<br/>fiapx_auth")]
+  LREG & LLOGIN & LPASS --> AURORA_AUTH[("Aurora<br/>fiapx_auth")]
+  LPASS -->|"SendNotification<br/>PASSWORD_RESET"| Q_NOTIF[["SQS<br/>notification-commands"]]
 
   APIGW -->|"/api/videos/*<br/>VPC Link"| ALB["ALB interno"]
   ALB --> API["video-api-web<br/>Laravel 13 no EKS"]
@@ -44,6 +46,7 @@ flowchart LR
   CONS & RELAY & CRON --> AURORA_VIDEO[("Aurora<br/>fiapx_video<br/>saga + outbox")]
   RELAY -->|"ProcessVideo<br/>CleanupArtifacts"| Q_PROC[["SQS<br/>processing-commands"]]
   RELAY -->|SendNotification| Q_NOTIF[["SQS<br/>notification-commands"]]
+  AUTHP["fiapx-auth<br/>Lambda password"] -->|"SendNotification<br/>templates de senha"| Q_NOTIF
 
   Q_PROC --> WRK["video-processor<br/>ffmpeg, KEDA 1..10"]
   WRK <-->|"vídeo e zip"| S3
@@ -67,7 +70,7 @@ containers enviam APM, logs e métricas ao New Relic (omitido no diagrama para n
 | CloudFront | AWS CloudFront | `fiapx-infra` | Única origem pública: `/*` serve o front-end, `/api/*` vai para o API Gateway |
 | Site | S3 privado (OAC) | `fiapx-web` | Arquivos estáticos do React |
 | API Gateway | HTTP API | `fiapx-infra` + rotas em `fiapx-auth` | Roteamento, authorizer, rate limit, logs de acesso |
-| Lambdas `register`, `login`, `authorizer` | Node.js 24 | `fiapx-auth` | Cadastro, login (JWT RS256) e validação do token |
+| Lambdas `register`, `login`, `password`, `authorizer` | Node.js 24 | `fiapx-auth` | Cadastro, login (JWT RS256), recuperação e troca de senha, validação do token |
 | ALB interno + VPC Link | AWS ALB | `fiapx-infra` | Leva o tráfego do API Gateway para dentro do EKS |
 | `video-api-web` | PHP 8.4.27 + Laravel 13 | `fiapx-video-api` | Endpoints `/api/videos*` e `/api/health/*` |
 | `outbox-relay` | mesma imagem, `php artisan outbox:relay` | `fiapx-video-api` | Publica nas filas os comandos gravados na outbox |

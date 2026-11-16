@@ -36,14 +36,16 @@ flowchart LR
 
 | Controle | Detalhe |
 |---|---|
-| Senhas | bcrypt com custo 12; mínimo de 8 caracteres; nunca registradas em log |
+| Senhas | bcrypt com custo 12; de 8 a 72 caracteres, com letra maiúscula, número e símbolo; nunca registradas em log |
+| Recuperação de senha | Resposta sempre igual (202), exista ou não o e-mail; token aleatório de 256 bits, válido por 30 min, de uso único, guardado só como hash SHA-256; pedido novo invalida os anteriores; no máximo 1 e-mail a cada 2 min por usuário |
+| Troca de senha | Exige a senha atual; e-mail `PASSWORD_CHANGED` avisa o usuário de toda troca |
 | Token | JWT RS256, validade de 1 hora, claims `sub`, `email`, `name`, `iss = fiapx-auth`, `aud = fiapx-api`, `exp` |
 | Chave privada | Só no Secrets Manager; só a Lambda `login` tem permissão de leitura |
 | Chave pública | No SSM Parameter Store; lida pelo `authorizer` e pelo `video-api` |
 | Authorizer | REQUEST, payload 2.0, cache de 300 s. Valida assinatura, `iss`, `aud` e `exp` e repassa `x-user-id`, `x-user-email` e `x-user-name` |
 | Defesa em profundidade | O `video-api` revalida o JWT com a chave pública, mesmo atrás do authorizer |
 | Mensagens de erro | Genéricas no cadastro e no login: não revelam se o e-mail existe |
-| Rate limit | Throttling no stage do API Gateway, mais restrito nas rotas `/api/auth/*` |
+| Rate limit | Throttling no stage do API Gateway, mais restrito nas rotas `/api/auth/*` e ainda mais em `/api/auth/password/*` |
 | Isolamento entre usuários | Toda consulta do `video-api` filtra por `user_id` do token. Vídeo de outro usuário responde 404 |
 
 ## Rede
@@ -64,6 +66,7 @@ Cada serviço tem uma role própria, com EKS Pod Identity no cluster e role de e
 | `video-processor` | S3: `GetObject` em `uploads/`, `PutObject` e `DeleteObject` em `results/`; SQS: receber e alterar visibilidade em `processing-commands`, enviar para `saga-replies.fifo` |
 | KEDA | SQS: `GetQueueAttributes` das filas monitoradas |
 | Lambda `login` | Secrets Manager: chave privada do JWT e segredo do banco `fiapx_auth` |
+| Lambda `password` | Secrets Manager: chave privada do JWT (o reset já autentica) e segredo do banco `fiapx_auth`; SQS: enviar para `notification-commands` |
 | Lambdas `register` e `authorizer` | Segredo do banco (`register`) e parâmetro SSM da chave pública (`authorizer`) |
 | Lambda `notification` | SQS: consumir `notification-commands`, enviar para `saga-replies.fifo`; DynamoDB: `PutItem`, `UpdateItem`, `GetItem`, `Query` na própria tabela; SES: `SendEmail` com o configuration set |
 | GitHub Actions | OIDC com uma role por repositório, limitada ao repositório e à branch `main` (apply) ou a PRs (plan) |
@@ -99,6 +102,8 @@ Cada serviço tem uma role própria, com EKS Pod Identity no cluster e role de e
 | Ameaça | Mitigação |
 |---|---|
 | Força bruta no login | Rate limit no API Gateway, bcrypt custo 12, mensagem genérica |
+| Enumeração de e-mails pela recuperação de senha | Resposta 202 idêntica para qualquer e-mail |
+| Link de redefinição vazado | Validade de 30 min, uso único, token fora da URL da API e fora dos logs |
 | Token roubado | Validade curta (1 h), HTTPS em todo o caminho, token em memória e `sessionStorage` (não em `localStorage`) |
 | Acesso a vídeo de outro usuário | Filtro por `user_id` em toda consulta; URLs pré-assinadas por objeto |
 | Upload de arquivo gigante ou malicioso | `content-length-range`, validação de extensão e MIME na saga, `ffmpeg` em container isolado com `emptyDir` limitado |

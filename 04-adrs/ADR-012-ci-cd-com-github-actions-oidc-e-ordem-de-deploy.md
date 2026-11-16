@@ -44,22 +44,9 @@ O time tem dois integrantes, o que torna inviável exigir aprovação de outra p
 
 ### Ordem de deploy (primeira subida)
 
-```mermaid
-flowchart TD
-  B["fiapx-infra/bootstrap<br/>state bucket + OIDC roles<br/>manual, 1x"] --> I["fiapx-infra envs/prod<br/>VPC, EKS, Aurora, S3, SQS, SES, ECR, API GW, SSM"]
-  I --> SQL["create-databases.sql<br/>Job no cluster ou passo do pipeline"]
-  SQL --> AUTH["fiapx-auth<br/>migrations, lambdas, rotas /api/auth, authorizer"]
-  SQL --> API["fiapx-video-api<br/>migrate, deploy, TargetGroupBinding, rotas /api/videos"]
-  AUTH --> API
-  I --> PROC["fiapx-video-processor<br/>deploy + ScaledObject"]
-  I --> NOTIF["fiapx-notification<br/>SQS, lambda, DynamoDB<br/>publica URL da fila no SSM"]
-  NOTIF --> API
-  I --> WEB["fiapx-web<br/>build, s3 sync, invalidação"]
-  API --> E2E["smoke test ponta a ponta<br/>register, login, upload, COMPLETED, download"]
-  PROC --> E2E
-  NOTIF --> E2E
-  WEB --> E2E
-```
+![Ordem de deploy entre repositórios](../diagramas/08-deploy/ordem-de-deploy.png)
+
+Diagrama mantido em [fluxo-de-deploy.md](../06-deploy/fluxo-de-deploy.md#ordem-entre-repositórios-primeira-subida).
 
 Depois da primeira subida, cada repositório faz deploy de forma independente.
 

@@ -2,14 +2,14 @@ openapi: 3.1.0
 info:
   title: FIAP X — API pública
   version: 1.0.0
-  summary: Cadastro, login e gestão de vídeos do processador FIAP X.
+  summary: Cadastro, login, senha e gestão de vídeos do processador FIAP X.
   description: |
     API pública consolidada do FIAP X (`fiapx-auth` + `fiapx-video-api`).
 
     - Todas as rotas ficam sob o prefixo `/api`, na mesma origem do front-end (CloudFront → API Gateway).
     - `/auth/*` é atendido pelas Lambdas do `fiapx-auth`; `/videos*` e `/health/*` pelo `fiapx-video-api`
       (API Gateway → VPC Link → ALB interno).
-    - As rotas de vídeos exigem `Authorization: Bearer <JWT>`. O token é emitido pelo login (RS256,
+    - As rotas de vídeos e `PUT /auth/password` exigem `Authorization: Bearer <JWT>`. O token é emitido pelo login (RS256,
       `iss: fiapx-auth`, `aud: fiapx-api`, validade de 3600 s) e validado pelo Lambda Authorizer.
     - O arquivo de vídeo **não** passa por esta API: `POST /videos` devolve um POST pré-assinado e o navegador
       envia o arquivo direto ao S3 (campos de `upload.fields` primeiro e o campo `file` por último).
@@ -26,7 +26,7 @@ servers:
     description: Mesma origem do front-end (CloudFront encaminha /api/* para o API Gateway).
 tags:
   - name: Autenticação
-    description: Cadastro e login de usuários (fiapx-auth, Lambdas Node.js).
+    description: Cadastro, login, recuperação e troca de senha (fiapx-auth, Lambdas Node.js).
   - name: Vídeos
     description: Envio, listagem de status e download dos vídeos processados (fiapx-video-api).
   - name: Saúde
@@ -40,8 +40,8 @@ paths:
       operationId: registerUser
       summary: Cadastrar usuário
       description: |
-        Cria um usuário. O e-mail é único e a senha precisa ter pelo menos 8 caracteres (guardada com bcrypt,
-        custo 12). As respostas de erro são genéricas e não revelam se o e-mail já está cadastrado: um
+        Cria um usuário. O e-mail é único e a senha segue a política de senha (mínimo de 8 caracteres, com pelo
+        menos uma letra maiúscula, um número e um símbolo; guardada com bcrypt, custo 12). As respostas de erro são genéricas e não revelam se o e-mail já está cadastrado: um
         e-mail repetido devolve o mesmo 422 genérico ("Não foi possível concluir o cadastro"), sem `errors` no campo
         `email`.
       security: []
@@ -54,7 +54,7 @@ paths:
             example:
               name: Maria Silva
               email: maria.silva@example.com
-              password: senha-forte-123
+              password: Senha-forte-123!
       responses:
         '201':
           description: Usuário criado.
@@ -88,7 +88,7 @@ paths:
               $ref: '#/components/schemas/LoginRequest'
             example:
               email: maria.silva@example.com
-              password: senha-forte-123
+              password: Senha-forte-123!
       responses:
         '200':
           description: Autenticado.
@@ -110,6 +110,141 @@ paths:
                 message: E-mail ou senha inválidos.
         '422':
           $ref: '#/components/responses/ValidationError'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+  /auth/password/forgot:
+    post:
+      tags: [Autenticação]
+      operationId: forgotPassword
+      summary: Pedir link de redefinição de senha
+      description: |
+        Se o e-mail estiver cadastrado, gera um token de redefinição (aleatório, 256 bits, guardado só como
+        hash SHA-256), válido por 30 minutos e de uso único, e envia o link `<web_url>/redefinir-senha?token=...`
+        por e-mail (comando `SendNotification` com o template `PASSWORD_RESET`). Um pedido novo invalida os
+        tokens anteriores do mesmo usuário. A resposta é **sempre 202**, exista ou não o e-mail, para não
+        revelar quem tem cadastro.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ForgotPasswordRequest'
+            example:
+              email: maria.silva@example.com
+      responses:
+        '202':
+          description: Pedido aceito. Se o e-mail estiver cadastrado, o link chega em instantes.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                message: Se o e-mail estiver cadastrado, você receberá as instruções em instantes.
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+  /auth/password/reset/verify:
+    post:
+      tags: [Autenticação]
+      operationId: verifyPasswordResetToken
+      summary: Verificar link de redefinição
+      description: |
+        Usado pela tela "Criar nova senha" ao abrir o link: confirma que o token ainda vale e devolve o e-mail
+        mascarado e a expiração, para a tela mostrar "Expira em N min". O token vai no corpo (não na URL da
+        API) para não aparecer em logs de acesso.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ResetTokenRequest'
+            example:
+              token: 3q2-7wAAAAB0b2tlbi1leGVtcGxvLWRlLTI1Ni1iaXRz
+      responses:
+        '200':
+          description: Token válido.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResetTokenInfo'
+              example:
+                email_masked: m***a@example.com
+                expires_at: '2026-11-16T12:30:00Z'
+        '422':
+          $ref: '#/components/responses/InvalidResetToken'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+  /auth/password/reset:
+    post:
+      tags: [Autenticação]
+      operationId: resetPassword
+      summary: Redefinir senha com o link
+      description: |
+        Troca a senha usando o token do link, marca o token como usado e já devolve um JWT ("Salvar nova senha
+        e entrar"). Também envia o e-mail de confirmação `PASSWORD_CHANGED`.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ResetPasswordRequest'
+            example:
+              token: 3q2-7wAAAAB0b2tlbi1leGVtcGxvLWRlLTI1Ni1iaXRz
+              password: Nova-senha-456!
+      responses:
+        '200':
+          description: Senha redefinida e usuário autenticado.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AccessToken'
+              example:
+                access_token: eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIwMTkyZjFjNCJ9.assinatura
+                token_type: Bearer
+                expires_in: 3600
+        '422':
+          $ref: '#/components/responses/InvalidResetToken'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+  /auth/password:
+    put:
+      tags: [Autenticação]
+      operationId: changePassword
+      summary: Alterar senha (usuário logado)
+      description: |
+        Troca a senha de quem está logado, conferindo a senha atual. Rota protegida pelo authorizer; o usuário
+        vem do token. Envia o e-mail de confirmação `PASSWORD_CHANGED`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChangePasswordRequest'
+            example:
+              current_password: Senha-forte-123!
+              new_password: Nova-senha-456!
+      responses:
+        '204':
+          description: Senha alterada.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          description: Senha atual incorreta ou nova senha fora da política.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                message: Os dados informados são inválidos.
+                errors:
+                  current_password:
+                    - A senha atual está incorreta.
         '429':
           $ref: '#/components/responses/TooManyRequests'
   /videos:
@@ -412,6 +547,14 @@ components:
                 - O formato do arquivo não é aceito. Use mp4, avi, mov, mkv, wmv, flv ou webm.
               size_bytes:
                 - O arquivo deve ter no máximo 500 MB.
+    InvalidResetToken:
+      description: Link de redefinição inexistente, expirado ou já usado (mensagem única para os três casos).
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            message: O link de redefinição é inválido ou expirou. Peça um novo.
     TooManyRequests:
       description: Limite de requisições do API Gateway excedido.
       content:
@@ -454,7 +597,69 @@ components:
           type: string
           format: password
           minLength: 8
-          description: Senha com pelo menos 8 caracteres.
+          maxLength: 72
+          pattern: '^(?=.*[A-Z])(?=.*[0-9])(?=.*[^A-Za-z0-9]).{8,72}$'
+          description: Senha com no mínimo 8 caracteres, pelo menos uma letra maiúscula, um número e um símbolo.
+    ForgotPasswordRequest:
+      type: object
+      required: [email]
+      properties:
+        email:
+          type: string
+          format: email
+          maxLength: 180
+          description: E-mail cadastrado.
+    ResetTokenRequest:
+      type: object
+      required: [token]
+      properties:
+        token:
+          type: string
+          minLength: 43
+          maxLength: 64
+          description: Token recebido no link (base64url de 32 bytes).
+    ResetTokenInfo:
+      type: object
+      required: [email_masked, expires_at]
+      properties:
+        email_masked:
+          type: string
+          description: E-mail do usuário com a parte local mascarada.
+        expires_at:
+          type: string
+          format: date-time
+          description: Momento em que o link expira.
+    ResetPasswordRequest:
+      type: object
+      required: [token, password]
+      properties:
+        token:
+          type: string
+          minLength: 43
+          maxLength: 64
+          description: Token recebido no link.
+        password:
+          type: string
+          format: password
+          minLength: 8
+          maxLength: 72
+          pattern: '^(?=.*[A-Z])(?=.*[0-9])(?=.*[^A-Za-z0-9]).{8,72}$'
+          description: Nova senha, seguindo a política de senha.
+    ChangePasswordRequest:
+      type: object
+      required: [current_password, new_password]
+      properties:
+        current_password:
+          type: string
+          format: password
+          description: Senha atual.
+        new_password:
+          type: string
+          format: password
+          minLength: 8
+          maxLength: 72
+          pattern: '^(?=.*[A-Z])(?=.*[0-9])(?=.*[^A-Za-z0-9]).{8,72}$'
+          description: Nova senha, seguindo a política de senha e diferente da atual.
     LoginRequest:
       type: object
       required: [email, password]
