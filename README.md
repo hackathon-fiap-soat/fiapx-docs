@@ -117,6 +117,8 @@ extensão *Markdown Preview Mermaid Support*.
 - Nova decisão de arquitetura, ou decisão que contrarie uma existente, vira um ADR novo em `04-adrs/`.
 - Mudança em contrato de mensagem segue a regra de versionamento de [`contracts/README.md`](contracts/README.md).
 - Nunca commitar segredos (`.env`, chaves, tokens). Use `.env.example` com valores fictícios.
+- Contexto para o Claude Code: [`CLAUDE.md`](CLAUDE.md) (projeto, regras e o papel deste repositório) e skills em
+  [`.claude/skills/`](.claude/skills/) com os procedimentos deste repositório.
 
 ## Licença
 
