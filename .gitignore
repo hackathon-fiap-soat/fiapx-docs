@@ -161,3 +161,6 @@ vite.config.ts.timestamp-*
 .turbo
 
 .mermaid-check/
+
+# Chave PÚBLICA de teste do contrato do JWT (não é segredo; a privada foi descartada)
+!contracts/jwt/public-key.test.pem
