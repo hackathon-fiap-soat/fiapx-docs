@@ -1,0 +1,13 @@
+{
+  // Regras do markdownlint para a documentação do FIAP X.
+  "config": {
+    "default": true,
+    // Tabelas e diagramas têm linhas longas por natureza.
+    "MD013": false,
+    // Títulos repetidos só são problema entre irmãos (ex.: "Regras" em seções diferentes é ok).
+    "MD024": { "siblings_only": true },
+    // Permite <br/> e similares em tabelas.
+    "MD033": false
+  },
+  "ignores": ["node_modules/**", ".mermaid-check/**", ".github/**"]
+}

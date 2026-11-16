@@ -1,0 +1,45 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/hackathon-fiap-soat/fiapx-docs/contracts/cleanup-artifacts.v1.schema.json",
+  "title": "CleanupArtifacts v1",
+  "description": "Comando de compensação da SAGA (video-api → video-processor): apaga os artefatos parciais do processamento.",
+  "allOf": [
+    {
+      "$ref": "envelope.schema.json"
+    },
+    {
+      "type": "object",
+      "properties": {
+        "type": {
+          "const": "CleanupArtifacts"
+        },
+        "version": {
+          "const": 1
+        },
+        "payload": {
+          "type": "object",
+          "description": "Payload de CleanupArtifacts.",
+          "required": [
+            "bucket",
+            "prefix"
+          ],
+          "properties": {
+            "bucket": {
+              "type": "string",
+              "minLength": 3,
+              "maxLength": 63,
+              "description": "Nome do bucket S3 de vídeos."
+            },
+            "prefix": {
+              "type": "string",
+              "pattern": "^results/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/$",
+              "maxLength": 512,
+              "description": "Prefixo a apagar (results/{video_id}/)."
+            }
+          },
+          "additionalProperties": false
+        }
+      }
+    }
+  ]
+}

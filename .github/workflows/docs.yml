@@ -1,0 +1,54 @@
+name: docs
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  markdown:
+    name: markdownlint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npx -y markdownlint-cli2@0.18.1 "**/*.md"
+
+  contracts:
+    name: JSON Schemas dos contratos
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: ./scripts/validate-contracts.sh
+
+  openapi:
+    name: OpenAPI (Spectral)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npx -y @stoplight/spectral-cli@6.15.0 lint api/openapi.yaml --ruleset api/.spectral.yaml --fail-severity=error
+
+  mermaid:
+    name: Diagramas Mermaid
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Configura o Chromium do Puppeteer sem sandbox (runner do GitHub)
+        run: echo '{"args":["--no-sandbox","--disable-setuid-sandbox"]}' > "$RUNNER_TEMP/puppeteer.json"
+      - run: ./scripts/check-mermaid.sh
+        env:
+          PUPPETEER_CFG: ${{ runner.temp }}/puppeteer.json

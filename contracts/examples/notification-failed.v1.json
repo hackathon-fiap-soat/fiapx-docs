@@ -1,0 +1,13 @@
+{
+  "message_id": "0193a1b2-8009-7a00-9b00-000000000009",
+  "type": "NotificationFailed",
+  "version": 1,
+  "saga_id": "0193a1b2-7d00-7e4f-8a5b-6c7d8e9f0a1d",
+  "video_id": "0192f1c4-7a2b-7c3d-8e4f-5a6b7c8d9e0f",
+  "correlation_id": "0193a1b2-7c3d-7e4f-8a5b-6c7d8e9f0a1e",
+  "occurred_at": "2026-11-16T12:09:00Z",
+  "payload": {
+    "channel": "EMAIL",
+    "error": "MessageRejected: Email address is not verified."
+  }
+}

@@ -1,0 +1,67 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/hackathon-fiap-soat/fiapx-docs/contracts/send-notification.v1.schema.json",
+  "title": "SendNotification v1",
+  "description": "Comando (video-api → notification) para enviar um e-mail ao usuário.",
+  "allOf": [
+    {
+      "$ref": "envelope.schema.json"
+    },
+    {
+      "type": "object",
+      "properties": {
+        "type": {
+          "const": "SendNotification"
+        },
+        "version": {
+          "const": 1
+        },
+        "payload": {
+          "type": "object",
+          "description": "Payload de SendNotification.",
+          "required": [
+            "template",
+            "recipient_email",
+            "recipient_name",
+            "video_name"
+          ],
+          "properties": {
+            "template": {
+              "type": "string",
+              "enum": [
+                "VIDEO_FAILED",
+                "VIDEO_COMPLETED"
+              ],
+              "description": "Modelo do e-mail."
+            },
+            "recipient_email": {
+              "type": "string",
+              "format": "email",
+              "maxLength": 180,
+              "description": "E-mail do destinatário (partition key no DynamoDB, normalizado em minúsculas)."
+            },
+            "recipient_name": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 120,
+              "description": "Nome do destinatário."
+            },
+            "video_name": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 255,
+              "description": "Nome original do arquivo de vídeo."
+            },
+            "reason": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 255,
+              "description": "Motivo da falha (opcional; usado no modelo VIDEO_FAILED e traduzido para texto legível pela notification)."
+            }
+          },
+          "additionalProperties": false
+        }
+      }
+    }
+  ]
+}

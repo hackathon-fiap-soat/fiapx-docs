@@ -1,0 +1,652 @@
+openapi: 3.1.0
+info:
+  title: FIAP X — API pública
+  version: 1.0.0
+  summary: Cadastro, login e gestão de vídeos do processador FIAP X.
+  description: |
+    API pública consolidada do FIAP X (`fiapx-auth` + `fiapx-video-api`).
+
+    - Todas as rotas ficam sob o prefixo `/api`, na mesma origem do front-end (CloudFront → API Gateway).
+    - `/auth/*` é atendido pelas Lambdas do `fiapx-auth`; `/videos*` e `/health/*` pelo `fiapx-video-api`
+      (API Gateway → VPC Link → ALB interno).
+    - As rotas de vídeos exigem `Authorization: Bearer <JWT>`. O token é emitido pelo login (RS256,
+      `iss: fiapx-auth`, `aud: fiapx-api`, validade de 3600 s) e validado pelo Lambda Authorizer.
+    - O arquivo de vídeo **não** passa por esta API: `POST /videos` devolve um POST pré-assinado e o navegador
+      envia o arquivo direto ao S3 (campos de `upload.fields` primeiro e o campo `file` por último).
+    - Erros seguem o formato `{ "message": string, "errors"?: { [campo]: string[] } }`.
+    - Há rate limit no stage do API Gateway (resposta 429).
+  contact:
+    name: Time FIAP X (hackathon-fiap-soat)
+    url: https://github.com/hackathon-fiap-soat/fiapx-docs
+  license:
+    name: MIT
+    identifier: MIT
+servers:
+  - url: /api
+    description: Mesma origem do front-end (CloudFront encaminha /api/* para o API Gateway).
+tags:
+  - name: Autenticação
+    description: Cadastro e login de usuários (fiapx-auth, Lambdas Node.js).
+  - name: Vídeos
+    description: Envio, listagem de status e download dos vídeos processados (fiapx-video-api).
+  - name: Saúde
+    description: Probes do Kubernetes e smoke test pelo gateway, sem autenticação.
+security:
+  - bearerAuth: []
+paths:
+  /auth/register:
+    post:
+      tags: [Autenticação]
+      operationId: registerUser
+      summary: Cadastrar usuário
+      description: |
+        Cria um usuário. O e-mail é único e a senha precisa ter pelo menos 8 caracteres (guardada com bcrypt,
+        custo 12). As respostas de erro são genéricas e não revelam se o e-mail já está cadastrado: um
+        e-mail repetido devolve o mesmo 422 genérico ("Não foi possível concluir o cadastro"), sem `errors` no campo
+        `email`.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+            example:
+              name: Maria Silva
+              email: maria.silva@example.com
+              password: senha-forte-123
+      responses:
+        '201':
+          description: Usuário criado.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+              example:
+                id: 0192f1c4-6a00-7b00-8c00-1d2e3f4a5b6c
+                name: Maria Silva
+                email: maria.silva@example.com
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+  /auth/login:
+    post:
+      tags: [Autenticação]
+      operationId: login
+      summary: Autenticar
+      description: |
+        Valida e-mail e senha e devolve um JWT RS256 com as claims `sub` (id do usuário), `email`, `name`,
+        `iss` (`fiapx-auth`), `aud` (`fiapx-api`) e `exp`. Credenciais inválidas sempre recebem a mesma
+        resposta genérica.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+            example:
+              email: maria.silva@example.com
+              password: senha-forte-123
+      responses:
+        '200':
+          description: Autenticado.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AccessToken'
+              example:
+                access_token: eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIwMTkyZjFjNCJ9.assinatura
+                token_type: Bearer
+                expires_in: 3600
+        '401':
+          description: E-mail ou senha inválidos (mensagem genérica).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                message: E-mail ou senha inválidos.
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+  /videos:
+    post:
+      tags: [Vídeos]
+      operationId: requestVideoUpload
+      summary: Solicitar envio de vídeo
+      description: |
+        Registra o vídeo com status `PENDING_UPLOAD` e devolve um POST pré-assinado do S3 (válido por tempo
+        limitado; o tamanho é limitado por `content-length-range`). O cliente envia o arquivo direto para
+        `upload.url` como `multipart/form-data`, com todos os `upload.fields` e o campo `file` por último, sem o
+        header `Authorization`. O processamento começa sozinho quando o S3 avisa a chegada do arquivo. Se o
+        envio não acontecer em 1 hora, o vídeo vai para `EXPIRED`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VideoUploadRequest'
+            example:
+              filename: aula-01.mp4
+              size_bytes: 73400320
+              content_type: video/mp4
+      responses:
+        '201':
+          description: Vídeo registrado e autorização de envio emitida.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VideoUploadCreated'
+              example:
+                id: 0192f1c4-7a2b-7c3d-8e4f-5a6b7c8d9e0f
+                status: PENDING_UPLOAD
+                upload:
+                  url: https://fiapx-prod-videos.s3.us-east-1.amazonaws.com/
+                  fields:
+                    key: uploads/0192f1c4-7a2b-7c3d-8e4f-5a6b7c8d9e0f.mp4
+                    Content-Type: video/mp4
+                    x-amz-algorithm: AWS4-HMAC-SHA256
+                    x-amz-credential: ASIAEXEMPLO/20261116/us-east-1/s3/aws4_request
+                    x-amz-date: 20261116T120000Z
+                    x-amz-security-token: token-de-sessao-exemplo
+                    policy: eyJleHBpcmF0aW9uIjoiMjAyNi0xMS0xNlQxMjoxNTowMFoifQ==
+                    x-amz-signature: 3f1c0a9e8b7d6c5b4a39281706f5e4d3c2b1a0f9e8d7c6b5a4938271605f4e3d
+                  expires_at: '2026-11-16T12:15:00Z'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+    get:
+      tags: [Vídeos]
+      operationId: listVideos
+      summary: Listar meus vídeos
+      description: |
+        Lista paginada dos vídeos do usuário do token, do mais recente para o mais antigo (`created_at desc`),
+        com filtro opcional por status.
+      parameters:
+        - name: status
+          in: query
+          required: false
+          description: Filtra pelo status do vídeo.
+          schema:
+            $ref: '#/components/schemas/VideoStatus'
+          example: PROCESSING
+        - name: page
+          in: query
+          required: false
+          description: Página (começa em 1).
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+          example: 1
+        - name: per_page
+          in: query
+          required: false
+          description: Itens por página.
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 10
+          example: 10
+      responses:
+        '200':
+          description: Página de vídeos.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VideoPage'
+              example:
+                data:
+                  - id: 0192f1c4-7a2b-7c3d-8e4f-5a6b7c8d9e0f
+                    original_name: aula-01.mp4
+                    size_bytes: 73400320
+                    status: COMPLETED
+                    frame_count: 184
+                    failure_code: null
+                    failure_reason: null
+                    created_at: '2026-11-16T12:00:00Z'
+                    updated_at: '2026-11-16T12:00:47Z'
+                  - id: 0192f1c4-7b00-7c3d-8e4f-5a6b7c8d9e10
+                    original_name: video-com-erro.avi
+                    size_bytes: 1048576
+                    status: FAILED
+                    frame_count: null
+                    failure_code: FFMPEG_ERROR
+                    failure_reason: O arquivo de vídeo está corrompido ou em um formato que não conseguimos ler
+                    created_at: '2026-11-16T11:58:00Z'
+                    updated_at: '2026-11-16T11:58:20Z'
+                meta:
+                  page: 1
+                  per_page: 10
+                  total: 2
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+  /videos/{id}:
+    get:
+      tags: [Vídeos]
+      operationId: showVideo
+      summary: Detalhar vídeo
+      description: Status, quantidade de frames, motivo da falha e datas de um vídeo do usuário.
+      parameters:
+        - $ref: '#/components/parameters/VideoId'
+      responses:
+        '200':
+          description: Vídeo encontrado.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Video'
+              example:
+                id: 0192f1c4-7a2b-7c3d-8e4f-5a6b7c8d9e0f
+                original_name: aula-01.mp4
+                size_bytes: 73400320
+                status: PROCESSING
+                frame_count: null
+                failure_code: null
+                failure_reason: null
+                created_at: '2026-11-16T12:00:00Z'
+                updated_at: '2026-11-16T12:00:05Z'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+  /videos/{id}/download:
+    get:
+      tags: [Vídeos]
+      operationId: getDownloadLink
+      summary: Obter link de download do zip
+      description: |
+        Devolve uma URL pré-assinada (GET no S3, válida por 15 minutos) do zip com os frames. Só funciona
+        quando o vídeo está `COMPLETED`.
+      parameters:
+        - $ref: '#/components/parameters/VideoId'
+      responses:
+        '200':
+          description: Link de download gerado.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DownloadLink'
+              example:
+                url: https://fiapx-prod-videos.s3.us-east-1.amazonaws.com/results/0192f1c4-7a2b-7c3d-8e4f-5a6b7c8d9e0f/frames.zip?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Expires=900&X-Amz-Signature=exemplo
+                expires_at: '2026-11-16T12:16:00Z'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: O vídeo ainda não foi concluído (ou falhou/expirou).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                message: O vídeo ainda não está pronto para download.
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+  /health/live:
+    get:
+      tags: [Saúde]
+      operationId: healthLive
+      summary: Liveness
+      description: Indica que o processo está de pé. Não consulta dependências. Rota sem authorizer.
+      security: []
+      responses:
+        '200':
+          description: Processo ativo.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Health'
+              example:
+                status: ok
+  /health/ready:
+    get:
+      tags: [Saúde]
+      operationId: healthReady
+      summary: Readiness
+      description: |
+        Testa as dependências (banco `fiapx_video` e SQS). Usado pelo Kubernetes e pelo smoke test do
+        pipeline através do gateway. Rota sem authorizer.
+      security: []
+      responses:
+        '200':
+          description: Pronto para receber tráfego.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Health'
+              example:
+                status: ok
+                checks:
+                  database: ok
+                  sqs: ok
+        '503':
+          description: Alguma dependência está indisponível.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Health'
+              example:
+                status: fail
+                checks:
+                  database: ok
+                  sqs: fail
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT RS256 emitido por `POST /auth/login`.
+  parameters:
+    VideoId:
+      name: id
+      in: path
+      required: true
+      description: Id do vídeo (UUID v7).
+      schema:
+        type: string
+        format: uuid
+      example: 0192f1c4-7a2b-7c3d-8e4f-5a6b7c8d9e0f
+  responses:
+    Unauthorized:
+      description: |
+        Token ausente. Também usado pelo `video-api` quando a revalidação do JWT falha (defesa em
+        profundidade). O front-end limpa o token e volta para o login.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            message: Unauthorized
+    Forbidden:
+      description: |
+        Token inválido ou expirado, recusado pelo Lambda Authorizer (resposta padrão do API Gateway HTTP API
+        para `isAuthorized: false`).
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            message: Forbidden
+    NotFound:
+      description: Vídeo inexistente ou de outro usuário.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            message: Vídeo não encontrado.
+    ValidationError:
+      description: Dados inválidos. `errors` traz as mensagens por campo.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            message: Os dados informados são inválidos.
+            errors:
+              filename:
+                - O formato do arquivo não é aceito. Use mp4, avi, mov, mkv, wmv, flv ou webm.
+              size_bytes:
+                - O arquivo deve ter no máximo 500 MB.
+    TooManyRequests:
+      description: Limite de requisições do API Gateway excedido.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            message: Too Many Requests
+  schemas:
+    Error:
+      type: object
+      description: Formato padrão de erro.
+      required: [message]
+      properties:
+        message:
+          type: string
+          description: Mensagem geral do erro.
+        errors:
+          type: object
+          description: Mensagens de validação por campo.
+          additionalProperties:
+            type: array
+            items:
+              type: string
+    RegisterRequest:
+      type: object
+      required: [name, email, password]
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 120
+          description: Nome do usuário.
+        email:
+          type: string
+          format: email
+          maxLength: 180
+          description: E-mail (único).
+        password:
+          type: string
+          format: password
+          minLength: 8
+          description: Senha com pelo menos 8 caracteres.
+    LoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+          description: E-mail cadastrado.
+        password:
+          type: string
+          format: password
+          description: Senha.
+    User:
+      type: object
+      required: [id, name, email]
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Id do usuário (UUID v7).
+        name:
+          type: string
+          description: Nome.
+        email:
+          type: string
+          format: email
+          description: E-mail.
+    AccessToken:
+      type: object
+      required: [access_token, token_type, expires_in]
+      properties:
+        access_token:
+          type: string
+          description: JWT RS256.
+        token_type:
+          type: string
+          const: Bearer
+          description: Tipo do token.
+        expires_in:
+          type: integer
+          description: Validade em segundos.
+          example: 3600
+    VideoStatus:
+      type: string
+      description: |
+        Status do vídeo. Finais: `COMPLETED`, `FAILED` e `EXPIRED`.
+        `PENDING_UPLOAD` (aguardando envio) → `UPLOADED` (recebido) → `QUEUED` (na fila) → `PROCESSING`
+        (processando) → `COMPLETED` (concluído); `FAILED` (falhou); `EXPIRED` (envio não feito em 1 hora).
+      enum:
+        - PENDING_UPLOAD
+        - UPLOADED
+        - QUEUED
+        - PROCESSING
+        - COMPLETED
+        - FAILED
+        - EXPIRED
+    Video:
+      type: object
+      required: [id, original_name, size_bytes, status, frame_count, failure_code, failure_reason, created_at, updated_at]
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Id do vídeo (UUID v7).
+        original_name:
+          type: string
+          description: Nome original do arquivo.
+        size_bytes:
+          type: integer
+          minimum: 1
+          description: Tamanho declarado do arquivo, em bytes.
+        status:
+          $ref: '#/components/schemas/VideoStatus'
+        frame_count:
+          type: [integer, 'null']
+          minimum: 1
+          description: Quantidade de frames extraídos (só quando `COMPLETED`).
+        failure_code:
+          type: [string, 'null']
+          enum: [INVALID_UPLOAD, QUOTA_EXCEEDED, FFMPEG_ERROR, NO_FRAMES, DOWNLOAD_ERROR, UPLOAD_ERROR, PROCESSING_TIMEOUT, null]
+          description: Código da falha (só quando `FAILED`). É o valor guardado no banco e trafegado nas mensagens.
+        failure_reason:
+          type: [string, 'null']
+          description: Texto legível do motivo, derivado de `failure_code` (só quando `FAILED`).
+        created_at:
+          type: string
+          format: date-time
+          description: Data de criação (envio dos metadados).
+        updated_at:
+          type: string
+          format: date-time
+          description: Data da última mudança.
+    VideoUploadRequest:
+      type: object
+      required: [filename, size_bytes, content_type]
+      properties:
+        filename:
+          type: string
+          minLength: 1
+          maxLength: 255
+          pattern: '\.(mp4|avi|mov|mkv|wmv|flv|webm|MP4|AVI|MOV|MKV|WMV|FLV|WEBM)$'
+          description: Nome do arquivo, com extensão mp4, avi, mov, mkv, wmv, flv ou webm (minúsculas ou maiúsculas).
+        size_bytes:
+          type: integer
+          minimum: 1
+          maximum: 524288000
+          description: Tamanho do arquivo em bytes (máximo de 500 MB). O S3 rejeita um envio maior que o declarado.
+        content_type:
+          type: string
+          maxLength: 100
+          description: 'Tipo MIME do arquivo (ex.: `video/mp4`, `video/x-msvideo`, `video/quicktime`, `video/x-matroska`).'
+    UploadTicket:
+      type: object
+      description: POST pré-assinado do S3.
+      required: [url, fields, expires_at]
+      properties:
+        url:
+          type: string
+          format: uri
+          description: URL do bucket para o POST `multipart/form-data`.
+        fields:
+          type: object
+          description: Campos a enviar no formulário, antes do campo `file`.
+          additionalProperties:
+            type: string
+        expires_at:
+          type: string
+          format: date-time
+          description: Validade da autorização de envio.
+    VideoUploadCreated:
+      type: object
+      required: [id, status, upload]
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Id do vídeo criado.
+        status:
+          type: string
+          const: PENDING_UPLOAD
+          description: Status inicial.
+        upload:
+          $ref: '#/components/schemas/UploadTicket'
+    PaginationMeta:
+      type: object
+      required: [page, per_page, total]
+      properties:
+        page:
+          type: integer
+          minimum: 1
+          description: Página atual.
+        per_page:
+          type: integer
+          minimum: 1
+          description: Itens por página.
+        total:
+          type: integer
+          minimum: 0
+          description: Total de vídeos que atendem ao filtro.
+    VideoPage:
+      type: object
+      required: [data, meta]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Video'
+        meta:
+          $ref: '#/components/schemas/PaginationMeta'
+    DownloadLink:
+      type: object
+      required: [url, expires_at]
+      properties:
+        url:
+          type: string
+          format: uri
+          description: URL pré-assinada (GET) do zip.
+        expires_at:
+          type: string
+          format: date-time
+          description: Validade da URL (15 minutos).
+    Health:
+      type: object
+      required: [status]
+      properties:
+        status:
+          type: string
+          enum: [ok, fail]
+          description: Resultado geral.
+        checks:
+          type: object
+          description: Resultado por dependência (somente no readiness).
+          additionalProperties:
+            type: string
+            enum: [ok, fail]
