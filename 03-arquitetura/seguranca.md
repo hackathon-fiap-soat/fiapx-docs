@@ -43,7 +43,7 @@ flowchart LR
 | Chave privada | Só no Secrets Manager; só as Lambdas `login` e `password` têm permissão de leitura |
 | Chave pública | No SSM Parameter Store; o Terraform do `fiapx-auth` a passa ao `authorizer` por variável de ambiente (rotacionar exige novo deploy), e o `video-api` a lê do SSM |
 | Authorizer | REQUEST, payload 2.0, cache de 300 s. Valida assinatura, `iss`, `aud` e `exp` e repassa `x-user-id`, `x-user-email` e `x-user-name` |
-| Defesa em profundidade | O `video-api` revalida o JWT com a chave pública, mesmo atrás do authorizer |
+| Defesa em profundidade | O `video-api` revalida o JWT com a chave pública, mesmo atrás do authorizer, com as mesmas regras e os mesmos vetores de teste do authorizer ([contrato do JWT](../contracts/jwt/README.md)) |
 | Mensagens de erro | Genéricas no cadastro e no login: não revelam se o e-mail existe |
 | Rate limit | Throttling no stage do API Gateway, mais restrito nas rotas `/api/auth/*` e ainda mais em `/api/auth/password/*` |
 | Isolamento entre usuários | Toda consulta do `video-api` filtra por `user_id` do token. Vídeo de outro usuário responde 404 |

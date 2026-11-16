@@ -21,7 +21,7 @@ Repositórios na organização [hackathon-fiap-soat](https://github.com/hackatho
 |---|---|---|---|
 | **fiapx-docs** | Documentação: arquitetura, ADRs, RFCs, contratos, OpenAPI, diagramas e entrega | Markdown + Mermaid + JSON Schema | Etapa 1 ✅ |
 | [`fiapx-infra`](https://github.com/hackathon-fiap-soat/fiapx-infra) | VPC, EKS, Aurora, S3, SQS, SES, ECR, API Gateway, OIDC, SSM, orquestrador de deploy e ambiente local | Terraform + Helm + docker-compose | Etapa 2 ✅ (local), Etapas 7–8 |
-| [`fiapx-auth`](https://github.com/hackathon-fiap-soat/fiapx-auth) | Lambdas de cadastro, login, senha e authorizer JWT | Node.js 24 + Terraform | Etapa 3 |
+| [`fiapx-auth`](https://github.com/hackathon-fiap-soat/fiapx-auth) | Lambdas de cadastro, login, senha e authorizer JWT | Node.js 24 + Terraform | Etapa 3 ✅ |
 | [`fiapx-video-api`](https://github.com/hackathon-fiap-soat/fiapx-video-api) | API de vídeos, URLs pré-assinadas, orquestrador da SAGA e outbox | PHP 8.4.27 + Laravel 13 no EKS | Etapa 4 |
 | [`fiapx-video-processor`](https://github.com/hackathon-fiap-soat/fiapx-video-processor) | Worker que extrai os frames com ffmpeg e gera o zip | PHP 8.4.27 + Laravel 13 no EKS + KEDA | Etapa 5 |
 | [`fiapx-notification`](https://github.com/hackathon-fiap-soat/fiapx-notification) | E-mails pelo SES com histórico e idempotência no DynamoDB | Node.js 24 + Terraform | Etapa 6 |
@@ -43,7 +43,8 @@ Decisão nova ou que contrarie uma existente vira ADR no `fiapx-docs`.
 
 ## Andamento (2026-11-16)
 
-Etapas 0 (repositórios), 1 (documentação) e 2 (ambiente local) concluídas. Próxima: Etapa 3 (`fiapx-auth`).
+Etapas 0 (repositórios), 1 (documentação), 2 (ambiente local) e 3 (`fiapx-auth`) concluídas. Próxima:
+Etapa 4 (`fiapx-video-api`).
 Ordem do plano: 3 auth → 4 video-api → 5 processor → 6 notification → 6.5 web → 7 infra AWS 🛑 → 8 CI/CD →
 9 observabilidade → 10 carga e entregáveis 🛑. O estado atualizado está no painel.
 
@@ -90,11 +91,11 @@ Fonte da verdade da arquitetura. Não tem código de aplicação.
 | `05-rfcs/` | RFC-001 a RFC-010 |
 | `06-deploy/` | fluxo de deploy, ambientes, parâmetros SSM |
 | `07-observabilidade/` | New Relic, dashboard e alertas |
-| `contracts/` | JSON Schemas das mensagens + `examples/` |
+| `contracts/` | JSON Schemas das mensagens + `examples/`; `jwt/` com o contrato e os vetores de teste do JWT |
 | `api/` | `openapi.yaml` + regras do Spectral |
 | `diagramas/` | PNG e SVG gerados de todo bloco Mermaid (não editar à mão) |
 | `entrega/` | documento de entrega e roteiro do vídeo |
-| `scripts/` | `validate-contracts.sh`, `check-mermaid.sh`, `render-diagrams.py` |
+| `scripts/` | `validate-contracts.sh`, `check-mermaid.sh`, `render-diagrams.py`, `gerar-vetores-jwt.js` |
 
 O CI (`docs.yml`) roda markdownlint, contratos, Spectral, Mermaid e `render-diagrams.py --check`.
 Ao mudar uma decisão, atualize também a especificação em `00-especificacao/Projeto-hackton.md`.

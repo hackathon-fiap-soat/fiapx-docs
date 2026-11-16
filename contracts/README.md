@@ -8,6 +8,11 @@ São a fonte da verdade para os *contract tests* de cada serviço (`Projeto-hack
 - O evento do S3 (`s3:ObjectCreated`) não usa o envelope: é um formato da AWS, descrito em
   [`s3-object-created.schema.json`](s3-object-created.schema.json) só com os campos que o `saga-consumer` lê.
 
+## JWT
+
+O formato do token de acesso, as regras de validação comuns ao authorizer (Node) e ao `fiapx-video-api`
+(Laravel) e os vetores de teste estão em [`jwt/`](jwt/README.md).
+
 ## Envelope
 
 | Campo | Tipo | Descrição |
