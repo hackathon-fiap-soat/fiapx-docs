@@ -7,9 +7,6 @@ São a fonte da verdade para os *contract tests* de cada serviço (`Projeto-hack
 - Toda mensagem nossa usa o [envelope padrão](envelope.schema.json) (§7.2). O conteúdo específico fica em `payload`.
 - O evento do S3 (`s3:ObjectCreated`) não usa o envelope: é um formato da AWS, descrito em
   [`s3-object-created.schema.json`](s3-object-created.schema.json) só com os campos que o `saga-consumer` lê.
-- Ao configurar a notificação do bucket, o S3 envia um `s3:TestEvent` (sem `Records`) para a fila
-  `video-uploaded`. O `saga-consumer` reconhece essa mensagem, registra em log e a apaga, sem tratá-la como
-  erro.
 
 ## Envelope
 
