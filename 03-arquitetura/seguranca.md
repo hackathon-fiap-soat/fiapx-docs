@@ -40,8 +40,8 @@ flowchart LR
 | Recuperação de senha | Resposta sempre igual (202), exista ou não o e-mail; token aleatório de 256 bits, válido por 30 min, de uso único, guardado só como hash SHA-256; pedido novo invalida os anteriores; no máximo 1 e-mail a cada 2 min por usuário |
 | Troca de senha | Exige a senha atual; e-mail `PASSWORD_CHANGED` avisa o usuário de toda troca |
 | Token | JWT RS256, validade de 1 hora, claims `sub`, `email`, `name`, `iss = fiapx-auth`, `aud = fiapx-api`, `exp` |
-| Chave privada | Só no Secrets Manager; só a Lambda `login` tem permissão de leitura |
-| Chave pública | No SSM Parameter Store; lida pelo `authorizer` e pelo `video-api` |
+| Chave privada | Só no Secrets Manager; só as Lambdas `login` e `password` têm permissão de leitura |
+| Chave pública | No SSM Parameter Store; o Terraform do `fiapx-auth` a passa ao `authorizer` por variável de ambiente (rotacionar exige novo deploy), e o `video-api` a lê do SSM |
 | Authorizer | REQUEST, payload 2.0, cache de 300 s. Valida assinatura, `iss`, `aud` e `exp` e repassa `x-user-id`, `x-user-email` e `x-user-name` |
 | Defesa em profundidade | O `video-api` revalida o JWT com a chave pública, mesmo atrás do authorizer |
 | Mensagens de erro | Genéricas no cadastro e no login: não revelam se o e-mail existe |

@@ -1016,6 +1016,9 @@ antes de continuar.
   e das rotas.
 - **DoD:** testes verdes; login localmente devolve um JWT válido, e o authorizer aceita/rejeita corretamente;
   recuperação de senha gera o e-mail no Mailpit e o link redefine a senha uma única vez.
+- ✅ Concluída em 2026-11-16 (fiapx-auth#4). A entrega do e-mail no Mailpit depende do `fiapx-notification`
+  e é conferida na Etapa 6; até lá, o `PASSWORD_RESET` é validado na fila pelo contract test e pela
+  integração. Localmente, `npm run dev` imita o API Gateway (o LocalStack Community não emula o HTTP API).
 
 ### Etapa 4 — fiapx-video-api
 
@@ -1037,6 +1040,7 @@ antes de continuar.
   saga, Terraform (fila + DLQ + Lambda + tabela), testes.
 - **DoD:** vídeo inválido no fluxo local gera um e-mail no Mailpit, um item `SENT` no DynamoDB (LocalStack)
   com PK = e-mail do usuário, e a saga termina em `NOTIFIED`. Mensagem duplicada não gera segundo e-mail.
+  O e-mail de redefinição pedido ao `fiapx-auth` também chega ao Mailpit (pendência da Etapa 3).
 
 ### Etapa 6.5 — fiapx-web
 
