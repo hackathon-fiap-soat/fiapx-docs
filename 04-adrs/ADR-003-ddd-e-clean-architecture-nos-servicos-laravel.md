@@ -27,7 +27,7 @@ flowchart LR
 
 Regras de ouro:
 
-- **Domain** é PHP puro: sem Laravel, Eloquent ou AWS SDK. Contém entidades e agregados (`Video`, `ProcessingSaga`, `ProcessingQuota`, `ProcessingJob`), value objects (`VideoId`, `VideoStatus`, `StorageKey`, `FileSize`, `VideoFormat`, `FailureReason`, `SagaState`, `Deadline`, `FramesPerSecond`...), eventos e interfaces de repositório.
+- **Domain** não importa o framework: sem Laravel, Eloquent ou AWS SDK (o serviço continua sendo uma aplicação Laravel; o framework entra pelas camadas Infrastructure e Presentation). Contém entidades e agregados (`Video`, `ProcessingSaga`, `ProcessingQuota`, `ProcessingJob`), value objects (`VideoId`, `VideoStatus`, `StorageKey`, `FileSize`, `VideoFormat`, `FailureReason`, `SagaState`, `Deadline`, `FramesPerSecond`...), eventos e interfaces de repositório.
 - **Application** contém os use cases (`RequestVideoUploadUseCase`, `ListUserVideosUseCase`, `StartProcessingSagaUseCase`, `HandleSagaReplyUseCase`, `CheckSagaTimeoutsUseCase`, `ProcessVideoUseCase`, `CleanupArtifactsUseCase`...) e depende só de interfaces (ports como `CommandBus`, `ObjectStorage`, `TransactionManager`, `MessageDeduplicator`).
 - **Infrastructure** implementa as interfaces: repositórios Eloquent, `S3ObjectStorage`, `OutboxCommandBus`, `SqsConsumer`, `FfmpegFrameExtractor`, `ZipFrameArchiver`, `VisibilityHeartbeat`.
 - **Presentation** só converte HTTP ou console em DTO e chama o use case.

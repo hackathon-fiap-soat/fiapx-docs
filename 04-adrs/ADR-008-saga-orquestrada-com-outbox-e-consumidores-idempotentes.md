@@ -13,7 +13,7 @@ Sem coordenação, um vídeo pode ficar preso em `PROCESSING`, a cota pode nunca
 
 ## Decisão
 
-Adotamos uma **SAGA orquestrada** cujo orquestrador vive no `fiapx-video-api`. O agregado `ProcessingSaga` (PHP puro, [ADR-003](ADR-003-ddd-e-clean-architecture-nos-servicos-laravel.md)) guarda o estado em `fiapx_video.processing_sagas`, reage ao evento de upload e às respostas e emite comandos.
+Adotamos uma **SAGA orquestrada** cujo orquestrador vive no `fiapx-video-api`. O agregado `ProcessingSaga` (camada de domínio, sem dependência do Laravel, [ADR-003](ADR-003-ddd-e-clean-architecture-nos-servicos-laravel.md)) guarda o estado em `fiapx_video.processing_sagas`, reage ao evento de upload e às respostas e emite comandos.
 
 | # | Passo | Participante | Falha | Compensação |
 | --- | --- | --- | --- | --- |
@@ -67,7 +67,7 @@ A comparação completa está na RFC-003.
 
 ### Mitigações
 
-- Máquina de estados em PHP puro, coberta por testes unitários e BDD.
+- Máquina de estados na camada de domínio, sem dependência do Laravel, coberta por testes unitários e BDD.
 - Alertas para sagas vencidas (`PROCESSING` com deadline vencido) e mensagens em DLQ ([ADR-011](ADR-011-observabilidade-com-new-relic.md)).
 - Limpeza periódica: o comando agendado `messaging:prune` (diário) apaga as mensagens da outbox já publicadas e os registros de `processed_messages` com mais de 7 dias (o SQS retém mensagens por no máximo 4 dias).
 - O front-end atualiza a lista de status automaticamente.
