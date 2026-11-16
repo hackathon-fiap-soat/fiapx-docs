@@ -20,7 +20,7 @@ O `terraform apply` na AWS acontece **pelo GitHub Actions**. Apply local é perm
 | Onde | Quando | Como |
 | --- | --- | --- |
 | **GitHub Actions (padrão)** | Todo merge na `main` de `fiapx-infra`, `fiapx-auth`, `fiapx-notification` (e o `infra/` de qualquer repo) | Job `apply` no environment `prod`, role OIDC do repositório, mesmo backend S3 com lock nativo. O PR sempre roda `plan` e comenta o resultado |
-| **Destroy** | Fora das demonstrações | Workflow manual `workflow_dispatch` (`destroy.yml`) com confirmação digitada (`input: confirm = "destroy-prod"`) |
+| **Destroy** | Fora das demonstrações | Workflow manual `destroy-all.yml` no `fiapx-infra`, com confirmação digitada (`input: confirm = "destroy-prod"`), que derruba todos os repositórios na ordem inversa ([ADR-018](ADR-018-orquestracao-do-deploy-no-github-actions.md)) |
 | **Local — LocalStack** | Desenvolvimento e testes do Terraform a qualquer momento | `tflocal` ou provider apontando para `http://localhost:4566`, state local em `.terraform-local/` (no `.gitignore`) |
 | **Local — AWS real** | **Só quando necessário para testar** algo que o LocalStack não cobre (ex.: EKS, SES de verdade) | Perfil AWS SSO do integrante, **mesmo backend remoto** (o lock evita colisão com o CI). Registrar no PR o que foi aplicado. O código precisa estar no PR antes ou logo depois, para o próximo apply do CI não reverter |
 
@@ -28,7 +28,7 @@ O `terraform apply` na AWS acontece **pelo GitHub Actions**. Apply local é perm
 
 - O workflow de `apply` **nunca roda em PR de fork**.
 - `prevent_destroy` no **Aurora**, no **bucket de vídeos** e na **tabela DynamoDB** `fiapx-<env>-notifications`.
-- O `destroy.yml` desliga essas proteções por **variável explícita**.
+- O `destroy-all.yml` desliga essas proteções por **variável explícita**.
 - Apply local na AWS real exige **autorização do time**.
 - O GitHub Environment `prod` pode exigir aprovação manual antes do `apply` (opcional, [ADR-012](ADR-012-ci-cd-com-github-actions-oidc-e-ordem-de-deploy.md)).
 - **Exceção:** o `fiapx-infra/bootstrap/` (bucket do tfstate e roles OIDC) roda uma única vez, manualmente e com state local, porque é ele que cria o que o CI precisa para autenticar ([ADR-002](ADR-002-aws-e-terraform-com-backend-s3-e-lock-nativo.md)).
@@ -41,7 +41,7 @@ flowchart TD
   APPLY --> STATE[("backend S3 com use_lockfile")]
   LOCAL["apply local na AWS, só teste e com autorização"] -.-> STATE
   LS["LocalStack, state local .terraform-local/"] -.-> LSONLY["não toca a AWS"]
-  DESTROY["destroy.yml manual, confirm = destroy-prod"] --> STATE
+  DESTROY["destroy-all.yml manual, confirm = destroy-prod"] --> STATE
 ```
 
 ## Alternativas consideradas
@@ -67,7 +67,7 @@ flowchart TD
 - Um apply local na AWS sem o código no PR é revertido pelo próximo apply do CI.
 - Mudanças só chegam à AWS depois do merge, o que deixa o ciclo de teste na AWS mais lento.
 - Se o lock ficar preso (job cancelado), os applies seguintes falham até a liberação.
-- O `destroy.yml` com as proteções desligadas apaga dados de verdade.
+- O `destroy-all.yml` com as proteções desligadas apaga dados de verdade.
 
 ### Mitigações
 

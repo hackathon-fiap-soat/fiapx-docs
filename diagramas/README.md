@@ -4,7 +4,7 @@ Imagens geradas a partir dos blocos Mermaid da documentação, organizadas por a
 leitura, para usar no documento de entrega, em slides e no vídeo. **Não edite estes arquivos à mão**:
 altere o diagrama no Markdown de origem e rode `python3 scripts/render-diagrams.py`.
 
-Total: 31 diagramas, cada um em PNG (escala 2x, fundo branco) e SVG.
+Total: 32 diagramas, cada um em PNG (escala 2x, fundo branco) e SVG.
 
 ## Contexto
 
@@ -73,6 +73,7 @@ Total: 31 diagramas, cada um em PNG (escala 2x, fundo branco) e SVG.
 | Diagrama | Imagens | Origem |
 |---|---|---|
 | Ordem de deploy entre repositórios (primeira subida) | [PNG](08-deploy/ordem-de-deploy.png) · [SVG](08-deploy/ordem-de-deploy.svg) | [`06-deploy/fluxo-de-deploy.md`](../06-deploy/fluxo-de-deploy.md) |
+| Orquestração do deploy: deploy-all no fiapx-infra (ADR-018) | [PNG](08-deploy/orquestracao-deploy-all.png) · [SVG](08-deploy/orquestracao-deploy-all.svg) | [`04-adrs/ADR-018-orquestracao-do-deploy-no-github-actions.md`](../04-adrs/ADR-018-orquestracao-do-deploy-no-github-actions.md) |
 | Pipelines por tipo de repositório | [PNG](08-deploy/pipelines.png) · [SVG](08-deploy/pipelines.svg) | [`06-deploy/fluxo-de-deploy.md`](../06-deploy/fluxo-de-deploy.md) |
 | Política de terraform apply (ADR-016) | [PNG](08-deploy/politica-terraform-apply.png) · [SVG](08-deploy/politica-terraform-apply.svg) | [`04-adrs/ADR-016-terraform-apply-somente-via-github-actions.md`](../04-adrs/ADR-016-terraform-apply-somente-via-github-actions.md) |
 
