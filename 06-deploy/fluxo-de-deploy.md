@@ -23,7 +23,7 @@ IAM Role por repositório criada no `fiapx-infra/bootstrap`: não existe access 
 | `fiapx-infra` | `fmt -check`, `validate`, `tflint`, `checkov`, `plan` comentado no PR | `apply` no environment `prod` |
 | `fiapx-auth` e `fiapx-notification` | eslint, jest (cobertura ≥ 80%), Sonar, `terraform plan` | build do zip → `terraform apply` → smoke test |
 | `fiapx-web` | eslint, vitest (cobertura ≥ 80%), Sonar, build | build → `s3 sync` → invalidação do CloudFront → smoke com Playwright |
-| `fiapx-video-api` | pint, phpstan (nível 6+), phpunit (cobertura ≥ 80%, MySQL como service container), behat (SAGA), Sonar, build + Trivy | push no ECR → Job `migrate` → `kustomize edit set image` → `kubectl apply -k` → `rollout status` → smoke test |
+| `fiapx-video-api` | pint, phpstan (nível 6+), phpunit (cobertura ≥ 80%, com MySQL e LocalStack do `fiapx-infra/local`), behat (SAGA), Sonar, build + Trivy, kustomize + kubeconform, `terraform plan` do `infra/` | `terraform apply` do `infra/` (rotas e role) → push no ECR → Job `migrate` → `kustomize edit set image` → `kubectl apply -k` → `rollout status` → smoke test |
 | `fiapx-video-processor` | pint, phpstan, phpunit (inclui integração com `ffmpeg` real e um vídeo de 3 s), Sonar, build + Trivy | push no ECR → `kustomize edit set image` → `kubectl apply -k` → `rollout status` |
 
 Os quatro tipos de pipeline, lado a lado:

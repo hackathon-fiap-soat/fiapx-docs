@@ -25,6 +25,10 @@ docker compose up -d --wait   # sobe e espera os scripts de init
 | LocalStack | `localstack/localstack:4.14.0` (S3, SQS, SES, SSM, Secrets Manager, DynamoDB, Lambda, API Gateway, IAM) | Serviços AWS | `http://localhost:4566` |
 | Mailpit | `axllent/mailpit:v1.33.1` | Caixa de entrada (o `fiapx-notification` usa `EMAIL_DRIVER=smtp`) | UI `http://localhost:8025`, SMTP `localhost:1025` |
 
+Containers de outros repositórios entram na rede `fiapx_default` e chegam ao LocalStack pelo host `localstack`.
+As URLs que o LocalStack devolve (ex.: filas em `sqs.us-east-1.localhost.localstack.cloud`) também funcionam
+de dentro dessa rede, porque o compose dá esses nomes como alias ao container.
+
 O LocalStack está fixado na `4.14.0`, a última versão Community que roda sem `LOCALSTACK_AUTH_TOKEN`
 (as versões `2026.x` exigem conta). Ele não guarda estado: os recursos são recriados a cada subida.
 

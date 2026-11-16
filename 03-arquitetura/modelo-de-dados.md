@@ -207,7 +207,8 @@ CREATE TABLE outbox_messages (
 CREATE TABLE processed_messages (
   message_id    CHAR(36)    NOT NULL PRIMARY KEY,
   type          VARCHAR(60) NOT NULL,
-  processed_at  TIMESTAMP   NOT NULL DEFAULT CURRENT_TIMESTAMP
+  processed_at  TIMESTAMP   NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  KEY idx_processed_at (processed_at)            -- limpeza diária (messaging:prune)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 ```
 
