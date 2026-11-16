@@ -21,7 +21,8 @@ São a fonte da verdade para os *contract tests* de cada serviço (`Projeto-hack
 | `occurred_at` | date-time | Instante do fato ou do comando, em UTC |
 | `payload` | objeto | Conteúdo do tipo |
 
-Nenhum campo extra é aceito no envelope nem no `payload` (`additionalProperties: false`).
+Nenhum campo extra é aceito no envelope nem no `payload` (`additionalProperties: false`). Essa rigidez vale
+para o produtor; o consumidor ignora campos desconhecidos (ver [Versionamento](#versionamento)).
 
 ## Filas, mensagens, produtores e consumidores
 
@@ -53,9 +54,13 @@ deve descartá-lo sem erro.
 ## Versionamento
 
 - O número da versão fica no campo `version` do envelope e no nome do arquivo (`<mensagem>.v<versão>.schema.json`).
-- **Qualquer** mudança no `payload` que um consumidor atual rejeitaria (campo novo, removido, renomeado ou com
-  tipo diferente) gera uma **nova versão**, em um novo arquivo (por exemplo, `process-video.v2.schema.json`).
-  Como os schemas não aceitam campos extras, até um campo opcional novo exige nova versão.
+- **Produtor estrito, consumidor tolerante.** Os schemas são estritos (`additionalProperties: false`) e são
+  usados nos testes de contrato do **produtor**: ele só emite exatamente o que está no contrato. O
+  **consumidor** valida os campos que usa e ignora campos que não conhece.
+- Por isso, **campo opcional novo** é mudança compatível: o schema da mesma versão é atualizado, primeiro
+  publicado no `fiapx-docs` e depois adotado pelo produtor.
+- Mudança **incompatível** (campo removido, renomeado, com tipo diferente ou que passa a ser obrigatório) gera
+  uma **nova versão**, em um novo arquivo (por exemplo, `process-video.v2.schema.json`).
 - Durante a transição, os consumidores aceitam **as duas versões**. O produtor só passa a emitir a nova versão
   depois que todos os consumidores foram implantados com suporte a ela. A versão antiga é removida em um PR
   posterior.

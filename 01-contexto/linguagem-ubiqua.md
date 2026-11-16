@@ -45,7 +45,7 @@ flowchart LR
 | Formato de vídeo | `VideoFormat` | Extensão permitida: mp4, avi, mov, mkv, wmv, flv ou webm |
 | Tamanho do arquivo | `FileSize` | Tamanho em bytes, no máximo 500 MB |
 | Chave de armazenamento | `StorageKey` | Caminho do objeto no S3: `uploads/{video_id}.{ext}` para o vídeo e `results/{video_id}/frames.zip` para o pacote. O `video_id` na chave liga o evento do S3 ao vídeo |
-| Motivo da falha | `FailureReason` | Código e texto legível que explicam por que o vídeo terminou em `FAILED` |
+| Motivo da falha | `FailureReason` | Código (`FFMPEG_ERROR`, `QUOTA_EXCEEDED`...) guardado no vídeo e trafegado nas mensagens, e o texto legível derivado dele para a tela e o e-mail |
 | Cota de processamento | `ProcessingQuota` | Quantidade máxima de vídeos de um usuário em processamento ao mesmo tempo (padrão 5) |
 | Reservar e liberar cota | `reserve()`, `release()` | Ocupar uma vaga da cota quando o vídeo entra na fila e devolvê-la ao final, com sucesso ou falha |
 | Saga de processamento | `ProcessingSaga` | Máquina de estados que coordena validação, cota, processamento, conclusão e notificação de um vídeo |

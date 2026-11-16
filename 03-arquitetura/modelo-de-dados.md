@@ -47,13 +47,15 @@ erDiagram
     varchar512 zip_key "nulo até concluir"
     int frame_count
     varchar20 status
-    varchar255 failure_reason
+    varchar40 failure_code "nulo se não falhou"
+    varchar255 failure_reason "texto legível"
     timestamp created_at
     timestamp updated_at
   }
   PROCESSING_SAGAS {
     char36 id PK
     char36 video_id FK,UK
+    char36 correlation_id "id do evento S3 que iniciou a saga"
     varchar30 state
     varchar30 current_step
     timestamp deadline_at
@@ -86,7 +88,12 @@ erDiagram
 ```
 
 `outbox_messages` e `processed_messages` não têm relação com as outras tabelas: são infraestrutura de
-mensageria, gravadas na mesma transação do efeito de negócio.
+mensageria, gravadas na mesma transação do efeito de negócio. O comando agendado `messaging:prune` apaga
+diariamente as mensagens da outbox já publicadas e os registros de `processed_messages` com mais de 7 dias.
+
+`videos.failure_code` guarda o código da falha (`FFMPEG_ERROR`...) e `failure_reason` o texto legível
+derivado dele. `processing_sagas.correlation_id` é copiado para todos os comandos da saga, inclusive os
+disparados pelo timeout.
 
 ## Script de criação
 
@@ -135,6 +142,7 @@ CREATE TABLE videos (
   zip_key         VARCHAR(512) NULL,
   frame_count     INT UNSIGNED NULL,
   status          VARCHAR(20)  NOT NULL,
+  failure_code    VARCHAR(40)  NULL,
   failure_reason  VARCHAR(255) NULL,
   created_at      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -145,6 +153,7 @@ CREATE TABLE videos (
 CREATE TABLE processing_sagas (
   id            CHAR(36)    NOT NULL PRIMARY KEY,
   video_id      CHAR(36)    NOT NULL,
+  correlation_id CHAR(36)   NOT NULL,
   state         VARCHAR(30) NOT NULL,
   current_step  VARCHAR(30) NOT NULL,
   deadline_at   TIMESTAMP   NULL,

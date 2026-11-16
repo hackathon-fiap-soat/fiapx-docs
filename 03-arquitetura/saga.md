@@ -88,6 +88,9 @@ Motivos legíveis enviados ao usuário:
 | `DOWNLOAD_ERROR`, `UPLOAD_ERROR` | Tivemos um problema temporário ao processar o vídeo. Tente enviar de novo |
 | `PROCESSING_TIMEOUT` | O processamento demorou mais do que o esperado. Tente enviar de novo |
 
+O banco e as mensagens guardam o **código** (`videos.failure_code`); o texto legível é derivado dele na
+API (`failure_reason`) e nos templates de e-mail.
+
 ## Regras de robustez
 
 | Regra | Como funciona |
@@ -99,6 +102,8 @@ Motivos legíveis enviados ao usuário:
 | **Lock otimista** | `processing_sagas.version` impede que dois consumidores avancem a mesma saga ao mesmo tempo |
 | **Timeout** | `deadline_at` é preenchido quando a saga entra em `PROCESSING_REQUESTED` (agora + 30 min) e renovado no `ProcessingStarted`. `saga:check-timeouts` (a cada minuto) compensa as sagas `PROCESSING_REQUESTED` ou `PROCESSING` com prazo vencido. Isso cobre também a mensagem que foi para a DLQ antes de qualquer resposta |
 | **Worker idempotente** | Se `results/{video_id}/frames.zip` já existe, o worker responde `VideoProcessed` sem reprocessar |
+| **Correlação** | O `correlation_id` da saga é o id do evento do S3 que a iniciou, guardado em `processing_sagas.correlation_id` e copiado para todos os comandos, inclusive os disparados pelo timeout |
+| **Limpeza** | `messaging:prune` (diário) apaga as mensagens da outbox já publicadas e os registros de `processed_messages` com mais de 7 dias. O SQS retém mensagens por no máximo 4 dias, então uma duplicata não chega depois disso |
 | **Expiração** | `videos:expire-pending` marca como `EXPIRED` os vídeos em `PENDING_UPLOAD` há mais de 1 hora |
 
 ## Cenários BDD obrigatórios

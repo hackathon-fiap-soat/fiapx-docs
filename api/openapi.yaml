@@ -41,7 +41,9 @@ paths:
       summary: Cadastrar usuário
       description: |
         Cria um usuário. O e-mail é único e a senha precisa ter pelo menos 8 caracteres (guardada com bcrypt,
-        custo 12). As respostas de erro são genéricas e não revelam se o e-mail já está cadastrado.
+        custo 12). As respostas de erro são genéricas e não revelam se o e-mail já está cadastrado: um
+        e-mail repetido devolve o mesmo 422 genérico ("Não foi possível concluir o cadastro"), sem `errors` no campo
+        `email`.
       security: []
       requestBody:
         required: true
@@ -209,6 +211,7 @@ paths:
                     size_bytes: 73400320
                     status: COMPLETED
                     frame_count: 184
+                    failure_code: null
                     failure_reason: null
                     created_at: '2026-11-16T12:00:00Z'
                     updated_at: '2026-11-16T12:00:47Z'
@@ -217,6 +220,7 @@ paths:
                     size_bytes: 1048576
                     status: FAILED
                     frame_count: null
+                    failure_code: FFMPEG_ERROR
                     failure_reason: O arquivo de vídeo está corrompido ou em um formato que não conseguimos ler
                     created_at: '2026-11-16T11:58:00Z'
                     updated_at: '2026-11-16T11:58:20Z'
@@ -253,6 +257,7 @@ paths:
                 size_bytes: 73400320
                 status: PROCESSING
                 frame_count: null
+                failure_code: null
                 failure_reason: null
                 created_at: '2026-11-16T12:00:00Z'
                 updated_at: '2026-11-16T12:00:05Z'
@@ -508,7 +513,7 @@ components:
         - EXPIRED
     Video:
       type: object
-      required: [id, original_name, size_bytes, status, frame_count, failure_reason, created_at, updated_at]
+      required: [id, original_name, size_bytes, status, frame_count, failure_code, failure_reason, created_at, updated_at]
       properties:
         id:
           type: string
@@ -527,9 +532,13 @@ components:
           type: [integer, 'null']
           minimum: 1
           description: Quantidade de frames extraídos (só quando `COMPLETED`).
+        failure_code:
+          type: [string, 'null']
+          enum: [INVALID_UPLOAD, QUOTA_EXCEEDED, FFMPEG_ERROR, NO_FRAMES, DOWNLOAD_ERROR, UPLOAD_ERROR, PROCESSING_TIMEOUT, null]
+          description: Código da falha (só quando `FAILED`). É o valor guardado no banco e trafegado nas mensagens.
         failure_reason:
           type: [string, 'null']
-          description: Motivo legível da falha (só quando `FAILED`).
+          description: Texto legível do motivo, derivado de `failure_code` (só quando `FAILED`).
         created_at:
           type: string
           format: date-time

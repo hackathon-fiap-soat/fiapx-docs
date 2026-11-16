@@ -66,8 +66,8 @@ transação distribuída entre Aurora, S3, SQS e SES, precisamos de:
   escalado por KEDA (1–5) e mensagens retidas no SQS enquanto ele estiver fora.
 - **Outbox acumulando** se o relay cair. Mitigação: alerta de pendências antigas e 1–2 réplicas do relay
   com `SKIP LOCKED`.
-- **Crescimento de `processed_messages` e `outbox_messages`.** Mitigação: limpeza periódica de registros
-  publicados ou antigos (definir na implementação).
+- **Crescimento de `processed_messages` e `outbox_messages`.** Mitigação: `messaging:prune` diário apaga
+  as mensagens publicadas e os registros processados com mais de 7 dias.
 - **Corrida entre timeout e resposta tardia.** Mitigação: lock otimista e guardas de transição; o
   cenário "resposta fora de ordem" é coberto pelo BDD.
 - **Complexidade maior que um fluxo síncrono.** Mitigação: documentação em `03-arquitetura/saga.md` e

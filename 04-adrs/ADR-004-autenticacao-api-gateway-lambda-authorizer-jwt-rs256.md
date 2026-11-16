@@ -78,7 +78,7 @@ A comparação completa está na RFC-004.
 
 ### Mitigações
 
-- Expiração curta (`expires_in: 3600`). O front-end volta ao login ao receber 401.
+- Expiração curta (`expires_in: 3600`). O front-end volta ao login ao receber 401 (sem header) ou 403 (token inválido ou expirado: é o que o authorizer com respostas simples devolve).
 - O procedimento de rotação da chave deve ser descrito em `03-arquitetura/seguranca.md`.
 - Conexão `mysql2` reaproveitada entre invocações e rate limit no stage.
 - Testes Jest (unit + integração com o MySQL do compose) cobrem aceitar e rejeitar tokens (assinatura, `iss`, `aud`, `exp`).

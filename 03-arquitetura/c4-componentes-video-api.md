@@ -10,7 +10,7 @@ flowchart TB
     VC["VideoController"]
     HC["HealthController"]
     REQ["FormRequests<br/>RequestVideoUpload, ListVideos"]
-    CMD["Console Commands<br/>outbox:relay, saga:consume,<br/>saga:check-timeouts, videos:expire-pending"]
+    CMD["Console Commands<br/>outbox:relay, saga:consume,<br/>saga:check-timeouts, videos:expire-pending,<br/>messaging:prune"]
   end
 
   subgraph Application
@@ -87,5 +87,5 @@ flowchart TB
 | `video-api-web` | php-fpm + nginx | HPA por CPU (70%), 2 a 6 réplicas |
 | `video-api-outbox-relay` | `php artisan outbox:relay` | 1 a 2 réplicas |
 | `video-api-saga-consumer` | `php artisan saga:consume` | KEDA, 1 a 5 réplicas |
-| CronJob | `php artisan schedule:run` | 1 por minuto |
+| CronJob | `php artisan schedule:run` (timeouts a cada minuto, expiração de uploads, `messaging:prune` diário) | 1 por minuto |
 | Job pré-deploy | `php artisan migrate --force` | 1 por deploy |

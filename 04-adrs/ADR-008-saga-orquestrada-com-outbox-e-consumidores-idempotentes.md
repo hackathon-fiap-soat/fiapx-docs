@@ -82,5 +82,5 @@ A comparação completa está na RFC-003.
 
 - Máquina de estados em PHP puro, coberta por testes unitários e BDD.
 - Alertas para sagas vencidas (`PROCESSING` com deadline vencido) e mensagens em DLQ ([ADR-011](ADR-011-observabilidade-com-new-relic.md)).
-- A limpeza periódica de mensagens já publicadas e processadas pode ser feita por um comando agendado. Ela ainda não está especificada e, se adotada, será registrada em um ADR novo.
+- Limpeza periódica: o comando agendado `messaging:prune` (diário) apaga as mensagens da outbox já publicadas e os registros de `processed_messages` com mais de 7 dias (o SQS retém mensagens por no máximo 4 dias).
 - O front-end atualiza a lista de status automaticamente.
