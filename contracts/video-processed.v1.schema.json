@@ -1,0 +1,56 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/hackathon-fiap-soat/fiapx-docs/contracts/video-processed.v1.schema.json",
+  "title": "VideoProcessed v1",
+  "description": "Resposta (video-processor → video-api): frames extraídos e zip gravado no S3.",
+  "allOf": [
+    {
+      "$ref": "envelope.schema.json"
+    },
+    {
+      "type": "object",
+      "properties": {
+        "type": {
+          "const": "VideoProcessed"
+        },
+        "version": {
+          "const": 1
+        },
+        "payload": {
+          "type": "object",
+          "description": "Payload de VideoProcessed.",
+          "required": [
+            "zip_key",
+            "frame_count",
+            "zip_size_bytes",
+            "duration_ms"
+          ],
+          "properties": {
+            "zip_key": {
+              "type": "string",
+              "pattern": "^results/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/frames\\.zip$",
+              "maxLength": 512,
+              "description": "Chave do zip (results/{video_id}/frames.zip)."
+            },
+            "frame_count": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Quantidade de frames no zip."
+            },
+            "zip_size_bytes": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Tamanho do zip em bytes."
+            },
+            "duration_ms": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Duração do processamento em milissegundos (download + ffmpeg + zip + upload)."
+            }
+          },
+          "additionalProperties": false
+        }
+      }
+    }
+  ]
+}

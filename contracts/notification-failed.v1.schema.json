@@ -1,0 +1,45 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/hackathon-fiap-soat/fiapx-docs/contracts/notification-failed.v1.schema.json",
+  "title": "NotificationFailed v1",
+  "description": "Resposta (notification → video-api): o envio falhou na última tentativa; a mensagem vai para a DLQ.",
+  "allOf": [
+    {
+      "$ref": "envelope.schema.json"
+    },
+    {
+      "type": "object",
+      "properties": {
+        "type": {
+          "const": "NotificationFailed"
+        },
+        "version": {
+          "const": 1
+        },
+        "payload": {
+          "type": "object",
+          "description": "Payload de NotificationFailed.",
+          "required": [
+            "channel"
+          ],
+          "properties": {
+            "channel": {
+              "type": "string",
+              "enum": [
+                "EMAIL"
+              ],
+              "description": "Canal usado no envio."
+            },
+            "error": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 2000,
+              "description": "Descrição do erro. Opcional."
+            }
+          },
+          "additionalProperties": false
+        }
+      }
+    }
+  ]
+}

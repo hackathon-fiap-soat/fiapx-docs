@@ -1,0 +1,58 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/hackathon-fiap-soat/fiapx-docs/contracts/process-video.v1.schema.json",
+  "title": "ProcessVideo v1",
+  "description": "Comando da SAGA (video-api → video-processor) para extrair 1 frame por segundo do vídeo e gerar o zip.",
+  "allOf": [
+    {
+      "$ref": "envelope.schema.json"
+    },
+    {
+      "type": "object",
+      "properties": {
+        "type": {
+          "const": "ProcessVideo"
+        },
+        "version": {
+          "const": 1
+        },
+        "payload": {
+          "type": "object",
+          "description": "Payload de ProcessVideo.",
+          "required": [
+            "bucket",
+            "video_key",
+            "fps",
+            "output_prefix"
+          ],
+          "properties": {
+            "bucket": {
+              "type": "string",
+              "minLength": 3,
+              "maxLength": 63,
+              "description": "Nome do bucket S3 de vídeos."
+            },
+            "video_key": {
+              "type": "string",
+              "pattern": "^uploads/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\\.(mp4|avi|mov|mkv|wmv|flv|webm)$",
+              "maxLength": 512,
+              "description": "Chave do vídeo enviado: uploads/{video_id}.{ext}."
+            },
+            "fps": {
+              "type": "integer",
+              "const": 1,
+              "description": "Frames extraídos por segundo (fixo em 1, como no projeto base)."
+            },
+            "output_prefix": {
+              "type": "string",
+              "pattern": "^results/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/$",
+              "maxLength": 512,
+              "description": "Prefixo de saída: results/{video_id}/. O zip é gravado em <output_prefix>frames.zip."
+            }
+          },
+          "additionalProperties": false
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,55 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/hackathon-fiap-soat/fiapx-docs/contracts/video-processing-failed.v1.schema.json",
+  "title": "VideoProcessingFailed v1",
+  "description": "Resposta (video-processor → video-api): falha definitiva no processamento. Dispara a compensação.",
+  "allOf": [
+    {
+      "$ref": "envelope.schema.json"
+    },
+    {
+      "type": "object",
+      "properties": {
+        "type": {
+          "const": "VideoProcessingFailed"
+        },
+        "version": {
+          "const": 1
+        },
+        "payload": {
+          "type": "object",
+          "description": "Payload de VideoProcessingFailed.",
+          "required": [
+            "error_code",
+            "error_message",
+            "attempt"
+          ],
+          "properties": {
+            "error_code": {
+              "type": "string",
+              "enum": [
+                "FFMPEG_ERROR",
+                "NO_FRAMES",
+                "DOWNLOAD_ERROR",
+                "UPLOAD_ERROR"
+              ],
+              "description": "Código da falha."
+            },
+            "error_message": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 2000,
+              "description": "Mensagem técnica da falha (não é exibida ao usuário)."
+            },
+            "attempt": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Número da tentativa em que a falha ocorreu (ApproximateReceiveCount)."
+            }
+          },
+          "additionalProperties": false
+        }
+      }
+    }
+  ]
+}

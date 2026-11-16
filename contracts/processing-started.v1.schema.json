@@ -1,0 +1,44 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/hackathon-fiap-soat/fiapx-docs/contracts/processing-started.v1.schema.json",
+  "title": "ProcessingStarted v1",
+  "description": "Resposta (video-processor → video-api): o worker começou a processar o vídeo.",
+  "allOf": [
+    {
+      "$ref": "envelope.schema.json"
+    },
+    {
+      "type": "object",
+      "properties": {
+        "type": {
+          "const": "ProcessingStarted"
+        },
+        "version": {
+          "const": 1
+        },
+        "payload": {
+          "type": "object",
+          "description": "Payload de ProcessingStarted.",
+          "required": [
+            "started_at",
+            "worker_id"
+          ],
+          "properties": {
+            "started_at": {
+              "type": "string",
+              "format": "date-time",
+              "description": "Início do processamento (ISO-8601, UTC)."
+            },
+            "worker_id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 255,
+              "description": "Identificador do worker (nome do pod)."
+            }
+          },
+          "additionalProperties": false
+        }
+      }
+    }
+  ]
+}

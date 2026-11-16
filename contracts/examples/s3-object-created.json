@@ -1,0 +1,25 @@
+{
+  "Records": [
+    {
+      "eventVersion": "2.1",
+      "eventSource": "aws:s3",
+      "awsRegion": "us-east-1",
+      "eventTime": "2026-11-16T12:00:02.123Z",
+      "eventName": "ObjectCreated:Post",
+      "s3": {
+        "s3SchemaVersion": "1.0",
+        "configurationId": "video-uploaded",
+        "bucket": {
+          "name": "fiapx-prod-videos",
+          "arn": "arn:aws:s3:::fiapx-prod-videos"
+        },
+        "object": {
+          "key": "uploads/0192f1c4-7a2b-7c3d-8e4f-5a6b7c8d9e0f.mp4",
+          "size": 73400320,
+          "eTag": "9b2cf535f27731c974343645a3985328",
+          "sequencer": "00673890A1B2C3D4E5"
+        }
+      }
+    }
+  ]
+}
