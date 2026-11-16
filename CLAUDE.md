@@ -33,8 +33,9 @@ Repositórios na organização [hackathon-fiap-soat](https://github.com/hackatho
    Storytelling, ADRs, RFCs, contratos das mensagens (`contracts/`), OpenAPI (`api/openapi.yaml`), modelo
    de dados, ambientes, [parâmetros SSM](https://github.com/hackathon-fiap-soat/fiapx-docs/blob/main/06-deploy/parametros-ssm.md) e
    [fluxo de deploy](https://github.com/hackathon-fiap-soat/fiapx-docs/blob/main/06-deploy/fluxo-de-deploy.md).
-2. **`../Projeto-hackton.md`**: especificação completa do time (decisões, plano em etapas §12, regras §13).
-   Fica na pasta de trabalho local, fora dos repositórios. Se não existir na máquina, use o `fiapx-docs`.
+2. **[Especificação](https://github.com/hackathon-fiap-soat/fiapx-docs/blob/main/00-especificacao/Projeto-hackton.md)** (`fiapx-docs/00-especificacao/Projeto-hackton.md`):
+   especificação completa do time (decisões, plano em etapas §12, regras §13). Na pasta de trabalho local,
+   `../Projeto-hackton.md` é um link simbólico para ela.
 3. **[Painel de progresso](https://claude.ai/artifact/BNesZU4D21nB7cqUoQp2rL)**: tarefas por etapa e status. Atualize ao concluir uma tarefa.
 
 Se o código e a documentação divergirem, ou algo estiver ambíguo, **pergunte ao time** antes de assumir.
@@ -81,6 +82,7 @@ Fonte da verdade da arquitetura. Não tem código de aplicação.
 
 | Pasta | Conteúdo |
 |---|---|
+| `00-especificacao/` | especificação completa (`Projeto-hackton.md`) e prompt do layout do front |
 | `01-contexto/` | visão geral, linguagem ubíqua, mapa de contextos |
 | `02-domain-storytelling/` | DS-01 a DS-06 |
 | `03-arquitetura/` | C4, sequências, SAGA, modelo de dados, segurança, escalabilidade |
@@ -95,6 +97,7 @@ Fonte da verdade da arquitetura. Não tem código de aplicação.
 | `scripts/` | `validate-contracts.sh`, `check-mermaid.sh`, `render-diagrams.py` |
 
 O CI (`docs.yml`) roda markdownlint, contratos, Spectral, Mermaid e `render-diagrams.py --check`.
+Ao mudar uma decisão, atualize também a especificação em `00-especificacao/Projeto-hackton.md`.
 
 ## Skills deste repositório
 

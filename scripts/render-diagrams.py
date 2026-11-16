@@ -67,7 +67,8 @@ CATALOGO = {
 
 def blocos():
     for md in sorted(glob.glob("**/*.md", recursive=True)):
-        if md.startswith(("diagramas/", "node_modules/", ".mermaid-check/")):
+        # 00-especificacao/ repete diagramas que já têm imagem a partir dos documentos de arquitetura.
+        if md.startswith(("diagramas/", "node_modules/", ".mermaid-check/", "00-especificacao/")):
             continue
         texto = open(md, encoding="utf-8").read()
         for i, m in enumerate(re.finditer(r"^```mermaid\n(.*?)^```", texto, re.S | re.M), 1):

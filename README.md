@@ -8,6 +8,10 @@ A documentação vem antes do código: os outros repositórios implementam o que
 
 ## Índice
 
+### 0. Especificação
+
+- [Especificação do projeto](00-especificacao/README.md): plano em etapas, regras do time e prompt do layout
+
 ### 1. Contexto
 
 - [Visão geral](01-contexto/visao-geral.md): problema, objetivos, requisitos e diagnóstico do projeto base
@@ -36,7 +40,7 @@ A documentação vem antes do código: os outros repositórios implementam o que
 
 ### 4. Decisões
 
-- [ADRs](04-adrs/README.md) (17 decisões)
+- [ADRs](04-adrs/README.md) (18 decisões)
 - [RFCs](05-rfcs/README.md) (10 comparações de alternativas)
 
 ### 5. Deploy e operação
