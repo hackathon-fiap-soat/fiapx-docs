@@ -120,4 +120,5 @@ Ao mudar uma decisão, atualize também a especificação em `00-especificacao/P
 | `diagramas` | ao criar ou alterar um bloco Mermaid |
 | `novo-adr` | ao registrar uma decisão |
 | `contratos` | ao criar ou alterar uma mensagem SQS ou um endpoint |
+| `deploy-aws` | ao terminar uma implementação (testar o deploy na AWS e derrubar), antes de PR com Terraform, Dockerfile ou manifests novos, e quando um deploy falhar |
 | `fiapx-pr` | ao abrir e mergear o PR |
