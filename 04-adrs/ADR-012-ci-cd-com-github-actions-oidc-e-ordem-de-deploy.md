@@ -1,9 +1,11 @@
 # ADR-012 — CI/CD com GitHub Actions + OIDC e ordem de deploy entre repositórios
 
-- **Status:** Aceito
+- **Status:** Aceito, parcialmente substituído por [ADR-019](ADR-019-deploy-na-aws-academy-learner-lab.md)
 - **Data:** 2026-11-16
 - **Decisores:** Diego Fenille, Eduardo Santos
 - **Relacionados:** [ADR-001](ADR-001-polyrepo-e-integracao-via-ssm-parameter-store.md), [ADR-002](ADR-002-aws-e-terraform-com-backend-s3-e-lock-nativo.md), [ADR-016](ADR-016-terraform-apply-somente-via-github-actions.md)
+
+> **Atualização ([ADR-019](ADR-019-deploy-na-aws-academy-learner-lab.md)):** sem OIDC: os workflows usam as credenciais temporárias da AWS Academy Learner Lab guardadas em GitHub Secrets (`AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_SESSION_TOKEN`), atualizadas a cada sessão do lab. Não há role por repositório nem `bootstrap`. O deploy do `fiapx-web` não invalida CloudFront (é um `s3 sync` para o S3 static website). Pipelines por repositório, ordem de deploy e checks de PR continuam.
 
 ## Contexto
 

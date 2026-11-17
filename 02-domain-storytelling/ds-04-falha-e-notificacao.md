@@ -71,5 +71,5 @@ flowchart LR
 | 3–5 | Compensação `CleanupArtifacts` → resposta `ArtifactsCleaned`; saga em `COMPENSATING` |
 | 6–7 | Compensação `ReleaseQuota`; vídeo `FAILED` com `failure_reason`; saga `COMPENSATED` |
 | 8 | Comando `SendNotification` (template `VIDEO_FAILED`) na fila `notification-commands` |
-| 9–10 | Lambda `notification`: `PutItem` condicional no DynamoDB (PK = e-mail, SK = `message_id`) e `SendEmail` no SES |
+| 9–10 | Lambda `notification`: `PutItem` condicional no DynamoDB (PK = e-mail, SK = `message_id`) e envio por SMTP (Nodemailer, provedor Brevo; Mailpit no ambiente local) |
 | 11 | Resposta `NotificationSent` → saga `NOTIFIED` |

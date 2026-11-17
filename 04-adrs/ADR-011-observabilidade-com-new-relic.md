@@ -1,9 +1,11 @@
 # ADR-011 — Observabilidade com New Relic
 
-- **Status:** Aceito
+- **Status:** Aceito, parcialmente substituído por [ADR-019](ADR-019-deploy-na-aws-academy-learner-lab.md)
 - **Data:** 2026-11-16
 - **Decisores:** Diego Fenille, Eduardo Santos
 - **Relacionados:** RFC-010 (observabilidade), [ADR-007](ADR-007-amazon-sqs-como-mensageria.md), [ADR-008](ADR-008-saga-orquestrada-com-outbox-e-consumidores-idempotentes.md), [ADR-009](ADR-009-worker-laravel-no-eks-escalado-por-keda.md)
+
+> **Atualização ([ADR-019](ADR-019-deploy-na-aws-academy-learner-lab.md)):** sem CloudWatch Metric Streams nem integração da conta AWS no New Relic (o lab não cria as roles). O New Relic fica com APM, Kubernetes (`nri-bundle`), logs e Lambdas (extensão com a license key). As métricas de SQS, DLQs, Aurora e API Gateway ficam no CloudWatch, com alarmes num tópico SNS com e-mail do time ([observabilidade.md](../07-observabilidade/observabilidade.md)).
 
 ## Contexto
 

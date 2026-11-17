@@ -1,9 +1,11 @@
 # ADR-014 — Front-end React + Vite em S3 + CloudFront, com `/api/*` na mesma origem
 
-- **Status:** Aceito
+- **Status:** Aceito, parcialmente substituído por [ADR-019](ADR-019-deploy-na-aws-academy-learner-lab.md)
 - **Data:** 2026-11-16
 - **Decisores:** Diego Fenille, Eduardo Santos
 - **Relacionados:** RFC-009 (hospedagem do front-end), [ADR-004](ADR-004-autenticacao-api-gateway-lambda-authorizer-jwt-rs256.md), [ADR-006](ADR-006-upload-direto-s3-e-inicio-da-saga-pelo-evento.md), [ADR-010](ADR-010-api-gateway-vpc-link-alb-interno-e-targetgroupbinding.md)
+
+> **Atualização ([ADR-019](ADR-019-deploy-na-aws-academy-learner-lab.md)):** o CloudFront foi negado no lab. O site é um **S3 static website** (bucket `fiapx-<env>-web-<account_id>`, HTTP, leitura pública só de objetos, `index.html` também como documento de erro). Site e API ficam em **origens diferentes**: CORS no HTTP API (origem = URL do site), `VITE_API_BASE_URL=<URL do API Gateway>/api` e CORS do bucket de vídeos com a URL do site. Não há invalidação de cache. Plano B: pod nginx no EKS pela rota `$default` do API Gateway. React + Vite e o token em memória + `sessionStorage` continuam.
 
 ## Contexto
 

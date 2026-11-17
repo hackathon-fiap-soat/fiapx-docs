@@ -1,9 +1,11 @@
 # ADR-013 — Notificação: SQS → Lambda Node.js → SES, com histórico e idempotência no DynamoDB (PK `email`, SK `message_id`)
 
-- **Status:** Aceito
+- **Status:** Aceito, parcialmente substituído por [ADR-019](ADR-019-deploy-na-aws-academy-learner-lab.md)
 - **Data:** 2026-11-16
 - **Decisores:** Diego Fenille, Eduardo Santos
 - **Relacionados:** RFC-008 (registro de notificações), [ADR-007](ADR-007-amazon-sqs-como-mensageria.md), [ADR-008](ADR-008-saga-orquestrada-com-outbox-e-consumidores-idempotentes.md), [ADR-015](ADR-015-remetente-de-email-dominio-proprio-e-sandbox-do-ses.md)
+
+> **Atualização ([ADR-019](ADR-019-deploy-na-aws-academy-learner-lab.md)):** o e-mail sai por **SMTP autenticado (Nodemailer) num provedor externo**, o Brevo por padrão, no lugar do SES. Credenciais no Secrets Manager (`fiapx/<env>/notification/smtp`), host e porta no SSM; localmente o mesmo adaptador aponta para o Mailpit. O handler opcional de eventos do SES (e os status `DELIVERED`, `BOUNCED` e `COMPLAINED`) deixa de existir, e o smoke test não usa mais o mailbox simulator. SQS → Lambda, histórico e idempotência no DynamoDB continuam.
 
 ## Contexto
 

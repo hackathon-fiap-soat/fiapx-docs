@@ -6,7 +6,9 @@ info:
   description: |
     API pública consolidada do FIAP X (`fiapx-auth` + `fiapx-video-api`).
 
-    - Todas as rotas ficam sob o prefixo `/api`, na mesma origem do front-end (CloudFront → API Gateway).
+    - Todas as rotas ficam sob o prefixo `/api`, no endpoint do API Gateway (HTTP API). O front-end fica em outra
+      origem (S3 static website, ADR-019) e usa `VITE_API_BASE_URL=<URL do API Gateway>/api`; o API Gateway
+      responde ao preflight CORS (origem = URL do site) antes do authorizer.
     - `/auth/*` é atendido pelas Lambdas do `fiapx-auth`; `/videos*` e `/health/*` pelo `fiapx-video-api`
       (API Gateway → VPC Link → ALB interno).
     - As rotas de vídeos e `PUT /auth/password` exigem `Authorization: Bearer <JWT>`. O token é emitido pelo login (RS256,
@@ -22,8 +24,15 @@ info:
     name: MIT
     identifier: MIT
 servers:
-  - url: /api
-    description: Mesma origem do front-end (CloudFront encaminha /api/* para o API Gateway).
+  - url: https://{apiId}.execute-api.{region}.amazonaws.com/api
+    description: HTTP API do API Gateway. A URL vem do parâmetro SSM `/fiapx/<env>/apigw/url`.
+    variables:
+      apiId:
+        default: abc123defg
+        description: Id do HTTP API (parâmetro SSM `/fiapx/<env>/apigw/api_id`).
+      region:
+        default: us-east-1
+        description: Região da AWS.
 tags:
   - name: Autenticação
     description: Cadastro, login, recuperação e troca de senha (fiapx-auth, Lambdas Node.js).

@@ -1,6 +1,6 @@
 {
   "name": "FIAP X — Processamento de vídeos",
-  "description": "Saúde da SAGA de processamento, filas SQS, worker (KEDA), API Gateway e video-api. Substitua accountIds [0] pelo id da conta New Relic antes de importar.",
+  "description": "Saúde da SAGA de processamento, worker (KEDA), video-api e Lambdas. Filas, DLQs, Aurora e API Gateway ficam no CloudWatch (ADR-019). Substitua accountIds [0] pelo id da conta New Relic antes de importar.",
   "permissions": "PUBLIC_READ_WRITE",
   "pages": [
     {
@@ -20,7 +20,7 @@
             "id": "viz.markdown"
           },
           "rawConfiguration": {
-            "text": "**FIAP X — Processamento de vídeos**\n\nEventos customizados: `VideoSagaTransition` (video-api) e `VideoProcessed` (video-processor). Atributos comuns: `video_id`, `saga_id`, `correlation_id`.\n\nFilas via CloudWatch Metric Streams (`aws.sqs.*`). Worker via `K8sDeploymentSample`.\n\nDocumentação: `fiapx-docs/07-observabilidade/observabilidade.md`."
+            "text": "**FIAP X — Processamento de vídeos**\n\nEventos customizados: `VideoSagaTransition` (video-api) e `VideoProcessed` (video-processor). Atributos comuns: `video_id`, `saga_id`, `correlation_id`.\n\nWorker via `K8sDeploymentSample`. Filas, DLQs, Aurora e API Gateway ficam no CloudWatch (ADR-019).\n\nDocumentação: `fiapx-docs/07-observabilidade/observabilidade.md`."
           }
         },
         {
@@ -298,81 +298,30 @@
       ]
     },
     {
-      "name": "Filas, worker e API",
-      "description": "SQS e DLQs, réplicas do worker, API Gateway, video-api e Lambdas.",
+      "name": "Worker, API e Lambdas",
+      "description": "Réplicas do worker, video-api e Lambdas. Filas, DLQs, Aurora e API Gateway: CloudWatch (ADR-019).",
       "widgets": [
         {
-          "title": "Profundidade das filas",
+          "title": "Filas e serviços gerenciados",
           "layout": {
             "column": 1,
             "row": 1,
-            "width": 6,
-            "height": 3
+            "width": 12,
+            "height": 2
           },
           "linkedEntityGuids": null,
           "visualization": {
-            "id": "viz.line"
+            "id": "viz.markdown"
           },
           "rawConfiguration": {
-            "nrqlQueries": [
-              {
-                "accountIds": [
-                  0
-                ],
-                "query": "SELECT max(aws.sqs.ApproximateNumberOfMessagesVisible) FROM Metric WHERE aws.sqs.QueueName LIKE 'fiapx-prod-%' AND aws.sqs.QueueName NOT LIKE '%-dlq%' FACET aws.sqs.QueueName TIMESERIES 5 minutes SINCE 6 hours ago"
-              }
-            ],
-            "platformOptions": {
-              "ignoreTimeRange": false
-            },
-            "legend": {
-              "enabled": true
-            },
-            "yAxisLeft": {
-              "zero": true
-            },
-            "facet": {
-              "showOtherSeries": false
-            }
+            "text": "**Filas, DLQs, Aurora e API Gateway ficam no CloudWatch.**\n\nNa AWS Academy Learner Lab não há role para o CloudWatch Metric Streams nem para a integração da conta AWS no New Relic (ADR-019). Profundidade das filas, mensagens nas DLQs, capacidade do Aurora e latência/erros do API Gateway são vistos no console do CloudWatch; os alarmes publicam no tópico SNS do time.\n\nDocumentação: `fiapx-docs/07-observabilidade/observabilidade.md`."
           }
         },
         {
-          "title": "Mensagens nas DLQs",
-          "layout": {
-            "column": 7,
-            "row": 1,
-            "width": 6,
-            "height": 3
-          },
-          "linkedEntityGuids": null,
-          "visualization": {
-            "id": "viz.billboard"
-          },
-          "rawConfiguration": {
-            "nrqlQueries": [
-              {
-                "accountIds": [
-                  0
-                ],
-                "query": "SELECT latest(aws.sqs.ApproximateNumberOfMessagesVisible) FROM Metric WHERE aws.sqs.QueueName LIKE 'fiapx-prod-%-dlq%' FACET aws.sqs.QueueName SINCE 30 minutes ago"
-              }
-            ],
-            "platformOptions": {
-              "ignoreTimeRange": false
-            },
-            "thresholds": [
-              {
-                "alertSeverity": "CRITICAL",
-                "value": 1
-              }
-            ]
-          }
-        },
-        {
-          "title": "Réplicas do worker (KEDA) x fila processing-commands",
+          "title": "Réplicas do worker (KEDA)",
           "layout": {
             "column": 1,
-            "row": 4,
+            "row": 3,
             "width": 12,
             "height": 3
           },
@@ -387,82 +336,6 @@
                   0
                 ],
                 "query": "SELECT latest(podsAvailable) AS 'Pods disponíveis', latest(podsDesired) AS 'Pods desejados' FROM K8sDeploymentSample WHERE clusterName LIKE 'fiapx-prod%' AND deploymentName LIKE '%video-processor%' TIMESERIES 1 minute SINCE 6 hours ago"
-              },
-              {
-                "accountIds": [
-                  0
-                ],
-                "query": "SELECT max(aws.sqs.ApproximateNumberOfMessagesVisible) AS 'Mensagens na processing-commands' FROM Metric WHERE aws.sqs.QueueName = 'fiapx-prod-processing-commands' TIMESERIES 1 minute SINCE 6 hours ago"
-              }
-            ],
-            "platformOptions": {
-              "ignoreTimeRange": false
-            },
-            "legend": {
-              "enabled": true
-            },
-            "yAxisLeft": {
-              "zero": true
-            },
-            "facet": {
-              "showOtherSeries": false
-            }
-          }
-        },
-        {
-          "title": "API Gateway — latência (ms)",
-          "layout": {
-            "column": 1,
-            "row": 7,
-            "width": 6,
-            "height": 3
-          },
-          "linkedEntityGuids": null,
-          "visualization": {
-            "id": "viz.line"
-          },
-          "rawConfiguration": {
-            "nrqlQueries": [
-              {
-                "accountIds": [
-                  0
-                ],
-                "query": "SELECT average(aws.apigateway.Latency) AS 'Latência média', max(aws.apigateway.Latency) AS 'Latência máxima', average(aws.apigateway.IntegrationLatency) AS 'Integração média' FROM Metric WHERE aws.apigateway.ApiId IS NOT NULL TIMESERIES 5 minutes SINCE 6 hours ago"
-              }
-            ],
-            "platformOptions": {
-              "ignoreTimeRange": false
-            },
-            "legend": {
-              "enabled": true
-            },
-            "yAxisLeft": {
-              "zero": true
-            },
-            "facet": {
-              "showOtherSeries": false
-            }
-          }
-        },
-        {
-          "title": "API Gateway — erros 4xx/5xx (%)",
-          "layout": {
-            "column": 7,
-            "row": 7,
-            "width": 6,
-            "height": 3
-          },
-          "linkedEntityGuids": null,
-          "visualization": {
-            "id": "viz.line"
-          },
-          "rawConfiguration": {
-            "nrqlQueries": [
-              {
-                "accountIds": [
-                  0
-                ],
-                "query": "SELECT sum(`aws.apigateway.4xx`) * 100 / sum(aws.apigateway.Count) AS '4xx (%)', sum(`aws.apigateway.5xx`) * 100 / sum(aws.apigateway.Count) AS '5xx (%)' FROM Metric WHERE aws.apigateway.ApiId IS NOT NULL TIMESERIES 5 minutes SINCE 6 hours ago"
               }
             ],
             "platformOptions": {
@@ -483,7 +356,7 @@
           "title": "video-api — latência p50/p95 (s)",
           "layout": {
             "column": 1,
-            "row": 10,
+            "row": 6,
             "width": 6,
             "height": 3
           },
@@ -518,7 +391,7 @@
           "title": "video-api — taxa de erro 5xx (%)",
           "layout": {
             "column": 7,
-            "row": 10,
+            "row": 6,
             "width": 6,
             "height": 3
           },
@@ -553,7 +426,7 @@
           "title": "Lambdas — invocações e erros",
           "layout": {
             "column": 1,
-            "row": 13,
+            "row": 9,
             "width": 12,
             "height": 3
           },
@@ -567,7 +440,7 @@
                 "accountIds": [
                   0
                 ],
-                "query": "SELECT sum(aws.lambda.Invocations) AS 'Invocações', sum(aws.lambda.Errors) AS 'Erros', average(aws.lambda.Duration) AS 'Duração média (ms)', sum(aws.lambda.Throttles) AS 'Throttles' FROM Metric WHERE aws.lambda.FunctionName LIKE 'fiapx-prod-%' FACET aws.lambda.FunctionName SINCE 1 day ago"
+                "query": "SELECT count(*) AS 'Invocações', filter(count(*), WHERE error IS true) AS 'Erros', average(duration) * 1000 AS 'Duração média (ms)' FROM AwsLambdaInvocation WHERE entityName LIKE 'fiapx-prod-%' FACET entityName SINCE 1 day ago"
               }
             ],
             "platformOptions": {

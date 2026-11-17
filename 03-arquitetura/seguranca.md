@@ -8,8 +8,8 @@ flowchart LR
     U["Navegador"]
   end
   subgraph Borda["Borda AWS"]
-    CF["CloudFront<br/>HTTPS"]
-    GW["API Gateway<br/>rate limit + authorizer"]
+    WEB[("S3 static website<br/>HTTP, só GetObject público")]
+    GW["API Gateway HTTPS<br/>CORS + rate limit + authorizer"]
   end
   subgraph VPC["VPC 2 AZs"]
     subgraph Privada["Subnets privadas"]
@@ -24,7 +24,8 @@ flowchart LR
   end
   S3[("S3 vídeos<br/>privado")]
 
-  U --> CF --> GW
+  U -- "HTTP" --> WEB
+  U -- "HTTPS, CORS" --> GW
   GW -- "VPC Link" --> ALB --> EKS
   GW --> LBD
   EKS & LBD --> AUR
@@ -53,12 +54,40 @@ flowchart LR
 - VPC em 2 AZs. Subnets públicas só com o NAT Gateway (um único, para reduzir custo).
 - EKS, Lambdas, Aurora e ALB em subnets privadas. O ALB interno só é alcançável pelo VPC Link.
 - VPC endpoints para S3 e DynamoDB (gateway, sem custo) e para SQS, Secrets Manager e SSM (interface): o
-  tráfego para esses serviços não sai pela internet. O SES é acessado pelo NAT.
+  tráfego para esses serviços não sai pela internet. O provedor SMTP (Brevo, porta 587 com STARTTLS) é
+  acessado pelo NAT.
 - Security groups por componente, com regras mínimas (Aurora aceita 3306 só dos SGs do EKS e das Lambdas).
 
 ## Permissões (IAM)
 
-Cada serviço tem uma role própria, com EKS Pod Identity no cluster e role de execução nas Lambdas.
+### Como está no lab: `LabRole`
+
+O ambiente `prod` roda na AWS Academy Learner Lab, que não deixa criar roles, usuários nem provedor OIDC
+([ADR-019](../04-adrs/ADR-019-deploy-na-aws-academy-learner-lab.md)). Toda identidade usa a role
+pré-existente **`LabRole`** (instance profile `LabInstanceProfile`), lida pelo Terraform com
+`data "aws_iam_role" "lab" { name = "LabRole" }`:
+
+| Quem | Identidade no lab |
+|---|---|
+| Cluster EKS e nós do managed node group | `LabRole` (role do cluster e instance profile dos nós) |
+| Pods do `video-api` e do `video-processor` | credenciais da `LabRole` dos nós, pelo IMDS (launch template com `http_put_response_hop_limit = 2`); sem EKS Pod Identity |
+| KEDA | identidade do operador (`identityOwner: keda`), também a `LabRole` dos nós |
+| AWS Load Balancer Controller | `LabRole` dos nós |
+| Lambdas do `fiapx-auth` e do `fiapx-notification` | `LabRole` como role de execução |
+| GitHub Actions (Terraform, `kubectl`, Helm) | credenciais temporárias da sessão do lab (role `voclabs`, criadora do cluster) em GitHub Secrets |
+
+**Risco aceito.** A `LabRole` tem permissões amplas, e todos os componentes a compartilham: um pod ou uma
+Lambda comprometidos alcançam qualquer recurso da conta, não só os do próprio serviço. O time aceita esse
+risco porque a conta é descartável, de uso acadêmico, sem dados reais de usuários, e o ambiente é
+destruído fora das demonstrações. Continuam valendo os controles que não dependem de IAM: subnets
+privadas, security groups mínimos, usuário de banco por serviço com privilégio mínimo, segredos no Secrets
+Manager e validação de todas as mensagens contra JSON Schema.
+
+### Desenho para uma conta própria (não aplicado no lab)
+
+Numa conta AWS própria, cada serviço teria uma role própria, com EKS Pod Identity no cluster, role de
+execução por Lambda e OIDC no GitHub Actions. As políticas de menor privilégio abaixo ficam documentadas
+como referência e são o caminho para sair do lab:
 
 | Identidade | Permissões |
 |---|---|
@@ -68,7 +97,7 @@ Cada serviço tem uma role própria, com EKS Pod Identity no cluster e role de e
 | Lambda `login` | Secrets Manager: chave privada do JWT e segredo do banco `fiapx_auth` |
 | Lambda `password` | Secrets Manager: chave privada do JWT (o reset já autentica) e segredo do banco `fiapx_auth`; SQS: enviar para `notification-commands` |
 | Lambdas `register` e `authorizer` | Segredo do banco (`register`) e parâmetro SSM da chave pública (`authorizer`) |
-| Lambda `notification` | SQS: consumir `notification-commands`, enviar para `saga-replies.fifo`; DynamoDB: `PutItem`, `UpdateItem`, `GetItem`, `Query` na própria tabela; SES: `SendEmail` com o configuration set |
+| Lambda `notification` | SQS: consumir `notification-commands`, enviar para `saga-replies.fifo`; DynamoDB: `PutItem`, `UpdateItem`, `GetItem`, `Query` na própria tabela; Secrets Manager: segredo `fiapx/<env>/notification/smtp` |
 | GitHub Actions | OIDC com uma role por repositório, limitada ao repositório e à branch `main` (apply) ou a PRs (plan) |
 
 ## Dados
@@ -77,7 +106,9 @@ Cada serviço tem uma role própria, com EKS Pod Identity no cluster e role de e
 |---|---|
 | Vídeos e zips | Bucket privado, Block Public Access, SSE-S3, acesso só por URL pré-assinada de curta duração (upload 1 h, download 15 min) |
 | Upload | POST pré-assinado com `content-length-range` (até 500 MB) e `Content-Type` fixado na política |
-| CORS do bucket | Só `POST`, só a origem do CloudFront |
+| CORS do bucket | Só `POST`, só a origem do site (URL do S3 static website) |
+| Site (front-end) | Bucket próprio com website hosting e leitura pública só de objetos (`s3:GetObject`); sem listagem nem escrita pública. Servido em HTTP (sem TLS), risco aceito para a demonstração acadêmica |
+| CORS da API | HTTP API com origem igual à URL do site, métodos `GET, POST, PUT, DELETE, OPTIONS` e headers `Authorization, Content-Type, X-Correlation-Id` |
 | Banco | Aurora com criptografia em repouso, TLS, usuário por serviço com privilégio mínimo, senhas no Secrets Manager |
 | DynamoDB | Criptografia padrão, PITR, TTL de 90 dias para dados pessoais (e-mail) |
 | Logs | JSON sem senha, token ou URL pré-assinada; e-mail só nos campos necessários para rastreabilidade |
@@ -85,8 +116,12 @@ Cada serviço tem uma role própria, com EKS Pod Identity no cluster e role de e
 ## Segredos
 
 - Nada de segredo no Git: `.env` e chaves estão no `.gitignore`; cada repositório tem um `.env.example`.
-- Segredos de aplicação no Secrets Manager; configurações não sensíveis no SSM Parameter Store.
-- GitHub Actions sem access keys: OIDC com roles por repositório.
+- Segredos de aplicação no Secrets Manager (inclusive as credenciais SMTP, em
+  `fiapx/<env>/notification/smtp`); configurações não sensíveis no SSM Parameter Store.
+- GitHub Actions com as credenciais temporárias do lab (`AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`,
+  `AWS_SESSION_TOKEN`) e as do SMTP (`SMTP_USER`, `SMTP_PASSWORD`, `SMTP_FROM`) em **GitHub Secrets**, nunca
+  em Variables (os repositórios são públicos e Variables não são mascaradas nos logs). As credenciais do
+  lab expiram com a sessão (~4 h) e são atualizadas a cada sessão.
 - Licença do New Relic como GitHub Secret no CI e como segredo no cluster.
 
 ## Cadeia de entrega
@@ -104,7 +139,10 @@ Cada serviço tem uma role própria, com EKS Pod Identity no cluster e role de e
 | Força bruta no login | Rate limit no API Gateway, bcrypt custo 12, mensagem genérica |
 | Enumeração de e-mails pela recuperação de senha | Resposta 202 idêntica para qualquer e-mail |
 | Link de redefinição vazado | Validade de 30 min, uso único, token fora da URL da API e fora dos logs |
-| Token roubado | Validade curta (1 h), HTTPS em todo o caminho, token em memória e `sessionStorage` (não em `localStorage`) |
+| Token roubado | Validade curta (1 h), token só trafega para a API (HTTPS), em memória e `sessionStorage` (não em `localStorage`) |
+| Site adulterado no caminho (HTTP sem TLS) | Risco aceito na demonstração (ADR-019); o plano B do ADR-019 serve o site pelo API Gateway, em HTTPS |
+| Componente comprometido usando a `LabRole` | Risco aceito no lab (ver [LabRole](#como-está-no-lab-labrole)); ambiente efêmero, sem dados reais |
+| Credencial do lab vazada no CI | Só em GitHub Secrets (mascarados), validade de ~4 h |
 | Acesso a vídeo de outro usuário | Filtro por `user_id` em toda consulta; URLs pré-assinadas por objeto |
 | Upload de arquivo gigante ou malicioso | `content-length-range`, validação de extensão e MIME na saga, `ffmpeg` em container isolado com `emptyDir` limitado |
 | Path traversal no download (problema do projeto base) | Não há leitura de caminho vindo do cliente: a chave do zip é montada a partir do `video_id` do banco |

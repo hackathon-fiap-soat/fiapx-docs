@@ -5,6 +5,8 @@
 - **Decisores:** Diego Fenille, Eduardo Santos
 - **Relacionados:** RFC-002 (upload de arquivos grandes), [ADR-007](ADR-007-amazon-sqs-como-mensageria.md), [ADR-008](ADR-008-saga-orquestrada-com-outbox-e-consumidores-idempotentes.md), [ADR-014](ADR-014-front-end-react-vite-em-s3-cloudfront-mesma-origem.md)
 
+> **Atualização ([ADR-019](ADR-019-deploy-na-aws-academy-learner-lab.md)):** o site passou para um S3 static website. O CORS do bucket de vídeos usa a URL do site (`/fiapx/<env>/web/url`) como origem, no lugar do domínio do CloudFront. O resto deste ADR continua.
+
 ## Contexto
 
 No projeto base, o vídeo é enviado no `POST /upload`, gravado em disco e processado dentro da mesma requisição. Isso não escala e perde trabalho se o processo cair.

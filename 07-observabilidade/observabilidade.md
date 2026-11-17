@@ -1,7 +1,13 @@
 # Observabilidade
 
-Como o FIAP X é observado no New Relic: instrumentação de cada camada, padrão de logs, eventos customizados da
-SAGA, dashboard, alertas e integração com a AWS. Fonte: `Projeto-hackton.md` §10 e ADR-011 / RFC-010.
+Como o FIAP X é observado: no New Relic, a instrumentação de cada camada, o padrão de logs, os eventos
+customizados da SAGA, o dashboard e os alertas; no CloudWatch, as métricas e os alarmes dos serviços
+gerenciados. Fonte: `Projeto-hackton.md` §10, ADR-011 / RFC-010 e
+[ADR-019](../04-adrs/ADR-019-deploy-na-aws-academy-learner-lab.md).
+
+Na AWS Academy Learner Lab não é possível criar a role do CloudWatch Metric Streams nem a da integração da
+conta AWS no New Relic (ADR-019). Por isso o New Relic fica com APM, Kubernetes, logs e Lambdas, e as
+métricas de SQS, DLQs, Aurora e API Gateway ficam no CloudWatch.
 
 ## Visão geral
 
@@ -22,14 +28,13 @@ flowchart LR
     S3[(S3)]
     GW[API Gateway]
   end
-  CW[CloudWatch Metric Streams] --> FH[Kinesis Data Firehose]
-  SQS & AUR & S3 & GW & LAMBDA -. métricas .-> CW
+  SQS & AUR & S3 & GW -. métricas .-> CW[CloudWatch<br/>métricas e alarmes]
+  CW --> SNS[SNS<br/>e-mail do time]
   API & PROC -- APM, eventos customizados e logs --> NR[New Relic]
   NRI -- K8s*Sample e logs --> NR
-  AUTH & NOTIF -- layer New Relic: APM e logs --> NR
-  FH -- Metric --> NR
+  AUTH & NOTIF -- extensão New Relic: invocações, traces e logs --> NR
   NR --> DASH[Dashboard FIAP X]
-  NR --> ALERT[Alertas]
+  NR --> ALERT[Alertas NRQL]
 ```
 
 Atributo comum para seguir um vídeo de ponta a ponta: `video_id`, junto com `saga_id` e `correlation_id`
@@ -41,8 +46,8 @@ Atributo comum para seguir um vídeo de ponta a ponta: `video_id`, junto com `sa
 |---|---|---|---|
 | EKS | Helm `nri-bundle` (infraestrutura, kube-state-metrics, eventos do Kubernetes, logs dos pods) | `fiapx-infra/modules/eks-addons` | `K8sClusterSample`, `K8sNodeSample`, `K8sPodSample`, `K8sDeploymentSample`, `K8sHpaSample`, `InfrastructureEvent`, `Log` |
 | video-api e video-processor | Agente New Relic PHP na imagem Docker; logs JSON (Monolog `JsonFormatter`) no stdout | Dockerfile e `config/logging.php` de cada repositório | `Transaction`, `TransactionError`, `Span`, eventos customizados, `Log` (logs in context) |
-| Lambdas (auth e notification) | Layer New Relic para Node.js + logs JSON no stdout | `infra/` (Terraform) de cada repositório | `AwsLambdaInvocation`, `AwsLambdaInvocationError`, `Span`, `Log` |
-| SQS, Aurora, S3, API Gateway, Lambda, SES, DynamoDB | Integração AWS ↔ New Relic por CloudWatch Metric Streams | `fiapx-infra` | `Metric` (`aws.sqs.*`, `aws.rds.*`, `aws.s3.*`, `aws.apigateway.*`, `aws.lambda.*`, `aws.ses.*`, `aws.dynamodb.*`) |
+| Lambdas (auth e notification) | Layer com a extensão do New Relic para Node.js (envia direto com a license key, sem integração da conta AWS) + logs JSON no stdout | `infra/` (Terraform) de cada repositório | `AwsLambdaInvocation`, `AwsLambdaInvocationError`, `Span`, `Log` |
+| SQS, DLQs, Aurora, API Gateway, S3, DynamoDB | Métricas nativas do CloudWatch e alarmes com SNS (não chegam ao New Relic) | `fiapx-infra` e `fiapx-notification` (Terraform) | nada; ver [CloudWatch](#serviços-gerenciados-no-cloudwatch) |
 
 Nomes das aplicações no APM (`newrelic.appname` / `NEW_RELIC_APP_NAME`): `fiapx-video-api`,
 `fiapx-video-processor`, `fiapx-auth` e `fiapx-notification`. A license key fica no Secrets Manager e é
@@ -166,7 +171,7 @@ fila travada ou erro no consumidor).
 ## Dashboard
 
 Arquivo importável: [`newrelic-dashboard.json`](newrelic-dashboard.json) (formato de export do New Relic, duas
-páginas). Todas as consultas estão com `accountIds: [0]`, um placeholder. Antes de importar, troque pelo id
+páginas). Filas, DLQs, Aurora e API Gateway não estão nele: ficam no CloudWatch. Todas as consultas estão com `accountIds: [0]`, um placeholder. Antes de importar, troque pelo id
 da conta:
 
 ```bash
@@ -232,38 +237,19 @@ SELECT latest(overdue_count) AS 'Sagas vencidas' FROM SagaTimeoutCheck SINCE 30 
 SELECT max(overdue_count) AS 'Vencidas', sum(compensated_count) AS 'Compensadas por timeout' FROM SagaTimeoutCheck TIMESERIES 5 minutes SINCE 1 day ago
 ```
 
-### Página "Filas, worker e API"
+### Página "Worker, API e Lambdas"
 
-**Profundidade das filas** (`viz.line`)
+**Filas e serviços gerenciados** (`viz.markdown`): lembra que filas, DLQs, Aurora e API Gateway ficam no
+CloudWatch.
 
-```sql
-SELECT max(aws.sqs.ApproximateNumberOfMessagesVisible) FROM Metric WHERE aws.sqs.QueueName LIKE 'fiapx-prod-%' AND aws.sqs.QueueName NOT LIKE '%-dlq%' FACET aws.sqs.QueueName TIMESERIES 5 minutes SINCE 6 hours ago
-```
-
-**Mensagens nas DLQs** (`viz.billboard`)
-
-```sql
-SELECT latest(aws.sqs.ApproximateNumberOfMessagesVisible) FROM Metric WHERE aws.sqs.QueueName LIKE 'fiapx-prod-%-dlq%' FACET aws.sqs.QueueName SINCE 30 minutes ago
-```
-
-**Réplicas do worker (KEDA) x fila processing-commands** (`viz.line`)
+**Réplicas do worker (KEDA)** (`viz.line`)
 
 ```sql
 SELECT latest(podsAvailable) AS 'Pods disponíveis', latest(podsDesired) AS 'Pods desejados' FROM K8sDeploymentSample WHERE clusterName LIKE 'fiapx-prod%' AND deploymentName LIKE '%video-processor%' TIMESERIES 1 minute SINCE 6 hours ago
-SELECT max(aws.sqs.ApproximateNumberOfMessagesVisible) AS 'Mensagens na processing-commands' FROM Metric WHERE aws.sqs.QueueName = 'fiapx-prod-processing-commands' TIMESERIES 1 minute SINCE 6 hours ago
 ```
 
-**API Gateway — latência (ms)** (`viz.line`)
-
-```sql
-SELECT average(aws.apigateway.Latency) AS 'Latência média', max(aws.apigateway.Latency) AS 'Latência máxima', average(aws.apigateway.IntegrationLatency) AS 'Integração média' FROM Metric WHERE aws.apigateway.ApiId IS NOT NULL TIMESERIES 5 minutes SINCE 6 hours ago
-```
-
-**API Gateway — erros 4xx/5xx (%)** (`viz.line`)
-
-```sql
-SELECT sum(`aws.apigateway.4xx`) * 100 / sum(aws.apigateway.Count) AS '4xx (%)', sum(`aws.apigateway.5xx`) * 100 / sum(aws.apigateway.Count) AS '5xx (%)' FROM Metric WHERE aws.apigateway.ApiId IS NOT NULL TIMESERIES 5 minutes SINCE 6 hours ago
-```
+Na demonstração de carga, este gráfico é mostrado ao lado do gráfico de `ApproximateNumberOfMessagesVisible`
+da fila `processing-commands` no CloudWatch.
 
 **video-api — latência p50/p95 (s)** (`viz.line`)
 
@@ -280,54 +266,55 @@ SELECT percentage(count(*), WHERE http.statusCode >= 500) AS '5xx (%)' FROM Tran
 **Lambdas — invocações e erros** (`viz.table`)
 
 ```sql
-SELECT sum(aws.lambda.Invocations) AS 'Invocações', sum(aws.lambda.Errors) AS 'Erros', average(aws.lambda.Duration) AS 'Duração média (ms)', sum(aws.lambda.Throttles) AS 'Throttles' FROM Metric WHERE aws.lambda.FunctionName LIKE 'fiapx-prod-%' FACET aws.lambda.FunctionName SINCE 1 day ago
+SELECT count(*) AS 'Invocações', filter(count(*), WHERE error IS true) AS 'Erros', average(duration) * 1000 AS 'Duração média (ms)' FROM AwsLambdaInvocation WHERE entityName LIKE 'fiapx-prod-%' FACET entityName SINCE 1 day ago
 ```
 
 ## Alertas
+
+Os alertas ficam em dois lugares: as condições NRQL sobre dados que o New Relic recebe (APM, eventos
+customizados) e os alarmes do CloudWatch sobre os serviços gerenciados.
+
+### New Relic
 
 Condições NRQL (New Relic Alerts), todas na política **FIAP X — prod**, com notificação por e-mail para o
 time. Agregação por janela deslizante quando indicado.
 
 | Alerta | Condição NRQL | Threshold (crítico) | Ação esperada |
 |---|---|---|---|
-| Mensagem em DLQ | `SELECT max(aws.sqs.ApproximateNumberOfMessagesVisible) FROM Metric WHERE aws.sqs.QueueName LIKE 'fiapx-prod-%-dlq%' FACET aws.sqs.QueueName` | `> 0` em pelo menos 1 minuto | Ler a mensagem, corrigir a causa e reprocessar (redrive) |
 | Taxa de falha de processamento | `SELECT percentage(count(*), WHERE to_state = 'COMPENSATED') FROM VideoSagaTransition WHERE to_state IN ('COMPLETED', 'COMPENSATED')` | `> 10` (%) com janela de 15 minutos | Ver "Motivos de falha" e os logs do `fiapx-video-processor` |
-| Fila `processing-commands` acumulada | `SELECT max(aws.sqs.ApproximateNumberOfMessagesVisible) FROM Metric WHERE aws.sqs.QueueName = 'fiapx-prod-processing-commands'` | `> 50` por 10 minutos | Conferir KEDA (`maxReplicaCount`), nós do EKS e erros no worker |
-| Erros 5xx no API Gateway | `` SELECT sum(`aws.apigateway.5xx`) * 100 / sum(aws.apigateway.Count) FROM Metric WHERE aws.apigateway.ApiId IS NOT NULL `` | `> 2` (%) por 5 minutos | Ver Lambdas de auth, ALB e `video-api` |
 | Erros 5xx no video-api | `SELECT percentage(count(*), WHERE http.statusCode >= 500) FROM Transaction WHERE appName = 'fiapx-video-api' AND transactionType = 'Web'` | `> 2` (%) por 5 minutos | Ver `TransactionError` e logs do `video-api` |
 | Sagas vencidas | `SELECT max(overdue_count) FROM SagaTimeoutCheck` | `> 0` por 5 minutos | Conferir `outbox-relay`, `saga-consumer` e CronJob |
 
 Recomendação complementar: ligar *loss of signal* (5 minutos) na condição "Sagas vencidas", para avisar se o
 CronJob `schedule:run` parar de rodar.
 
-As DLQs também têm alarmes no CloudWatch (`ApproximateNumberOfMessagesVisible > 0`, §7.1), criados pelo
-Terraform. Eles chegam ao New Relic pela mesma integração e servem de redundância caso a condição NRQL
-fique sem dados.
+### CloudWatch
 
-## Integração AWS (CloudWatch Metric Streams)
+Alarmes criados pelo Terraform (`fiapx-infra/modules/messaging` e `edge`; a DLQ da
+`notification-commands` no `fiapx-notification/infra`), todos publicando num tópico SNS com assinatura de
+e-mail do time. Cada integrante confirma a assinatura no e-mail que a AWS envia
+depois de cada subida do ambiente.
 
-As métricas dos serviços gerenciados chegam ao New Relic por **CloudWatch Metric Streams**, criados pelo
-Terraform no `fiapx-infra`:
+| Alarme | Métrica (namespace) | Threshold | Ação esperada |
+|---|---|---|---|
+| Mensagem em DLQ (um por DLQ) | `ApproximateNumberOfMessagesVisible` (`AWS/SQS`) | `> 0` em 1 minuto | Ler a mensagem, corrigir a causa e reprocessar (redrive) |
+| Fila `processing-commands` acumulada | `ApproximateNumberOfMessagesVisible` (`AWS/SQS`) | `> 50` por 10 minutos | Conferir KEDA (`maxReplicaCount`), nós do EKS e erros no worker |
+| Erros 5xx no API Gateway | `5xx` (`AWS/ApiGateway`) | `> 2%` das requisições (*metric math* com `Count`) por 5 minutos | Ver Lambdas de auth, ALB e `video-api` |
 
-1. Integração da conta AWS no New Relic (*AWS → Metric Streams*): role IAM que o New Relic assume para ler
-   metadados e tags.
-2. `aws_kinesis_firehose_delivery_stream` com destino HTTP no endpoint do New Relic (license key no Secrets
-   Manager) e bucket S3 de backup para entregas com falha.
-3. `aws_cloudwatch_metric_stream` em formato `opentelemetry0.7`, filtrando só os namespaces usados:
-   `AWS/SQS`, `AWS/RDS`, `AWS/S3`, `AWS/ApiGateway`, `AWS/Lambda`, `AWS/SES`, `AWS/DynamoDB` e `AWS/Firehose`.
+## Serviços gerenciados no CloudWatch
 
-| Namespace | Métricas usadas | Onde |
+Sem CloudWatch Metric Streams, as métricas dos serviços gerenciados são consultadas direto no console do
+CloudWatch (*Metrics* e *Alarms*), sem custo extra:
+
+| Namespace | Métricas usadas | Para quê |
 |---|---|---|
-| `AWS/SQS` | `ApproximateNumberOfMessagesVisible`, `ApproximateAgeOfOldestMessage`, `NumberOfMessagesSent` | Filas, DLQs e alertas |
-| `AWS/RDS` | `ServerlessDatabaseCapacity`, `DatabaseConnections`, `CPUUtilization` | Capacidade do Aurora Serverless v2 |
-| `AWS/S3` | `BucketSizeBytes`, `NumberOfObjects` (diárias) | Volume de vídeos e zips |
+| `AWS/SQS` | `ApproximateNumberOfMessagesVisible`, `ApproximateAgeOfOldestMessage`, `NumberOfMessagesSent` | Profundidade das filas e das DLQs; evidência da fila crescendo no teste de carga |
+| `AWS/RDS` | `ServerlessDatabaseCapacity`, `DatabaseConnections`, `CPUUtilization` | Capacidade do Aurora (ACU) |
 | `AWS/ApiGateway` | `Count`, `4xx`, `5xx`, `Latency`, `IntegrationLatency` | Latência e erros do gateway |
-| `AWS/Lambda` | `Invocations`, `Errors`, `Duration`, `Throttles` | Auth e notification |
-| `AWS/SES` | `Send`, `Delivery`, `Bounce`, `Complaint` | Envio de e-mails |
+| `AWS/S3` | `BucketSizeBytes`, `NumberOfObjects` (diárias) | Volume de vídeos e zips |
 
-As métricas chegam como eventos `Metric` com o prefixo `aws.` e as dimensões como atributos (ex.:
-`aws.sqs.QueueName`). As métricas do S3 por bucket são diárias; métricas de requisição do S3 não são
-habilitadas, para não gerar custo.
+As Lambdas também publicam `AWS/Lambda` no CloudWatch, mas a fonte principal delas é a extensão do New
+Relic. As métricas de requisição do S3 não são habilitadas, para não gerar custo.
 
 ## Como seguir um vídeo ponta a ponta
 

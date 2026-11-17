@@ -4,6 +4,13 @@ Cada RFC segue o formato **Resumo, Motivação, Proposta, Alternativas (tabela c
 Decisão**, e a decisão aprovada é registrada no ADR indicado em [`04-adrs`](../04-adrs/).
 Custos citados são estimativas qualitativas ou aproximadas; a fonte da verdade é a especificação do projeto.
 
+> **Atualização ([ADR-019](../04-adrs/ADR-019-deploy-na-aws-academy-learner-lab.md)):** as RFCs são
+> propostas históricas e não foram reescritas. O deploy na AWS Academy Learner Lab alterou o resultado de
+> quatro delas: **RFC-001** (sem bootstrap nem OIDC; o workflow cria o bucket do state e usa as credenciais
+> do lab), **RFC-008** (o e-mail sai por SMTP externo, Brevo, no lugar do SES; o registro no DynamoDB
+> continua), **RFC-009** (front-end em S3 static website com CORS no API Gateway, no lugar do CloudFront) e
+> **RFC-010** (sem CloudWatch Metric Streams; métricas de SQS, DLQs, Aurora e API Gateway no CloudWatch).
+
 | RFC | Tema | Decisão resumida | ADR |
 | --- | --- | --- | --- |
 | 001 | [Escolha da cloud e da IaC](RFC-001-cloud-e-iac.md) | AWS + Terraform ≥ 1.10, backend S3 com lock nativo e saídas no SSM | ADR-002 |

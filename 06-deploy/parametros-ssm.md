@@ -15,32 +15,39 @@ removida.
 | `region` | região da AWS | `fiapx-infra` | todos |
 | `vpc/private_subnet_ids` | subnets privadas | `fiapx-infra` | `fiapx-auth`, `fiapx-notification` (Lambdas na VPC) |
 | `vpc/lambda_security_group_id` | security group das Lambdas na VPC (o do Aurora aceita conexões dele) | `fiapx-infra` | `fiapx-auth`, `fiapx-notification` |
-| `eks/cluster_name` | nome do cluster | `fiapx-infra` | `fiapx-video-api`, `fiapx-video-processor` (deploy e associação do Pod Identity) |
+| `eks/cluster_name` | nome do cluster | `fiapx-infra` | `fiapx-video-api`, `fiapx-video-processor` (deploy) |
 | `aurora/endpoint`, `aurora/port` | endereço do banco | `fiapx-infra` | `fiapx-auth`, `fiapx-video-api` |
 | `aurora/secret_arn` | segredo do usuário master | `fiapx-infra` | só o `fiapx-infra` (criação dos databases) |
 | `db/auth/secret_arn` | segredo do usuário `fiapx_auth` | `fiapx-infra` | `fiapx-auth` |
 | `db/video/secret_arn` | segredo do usuário `fiapx_video` | `fiapx-infra` | `fiapx-video-api` |
 | `auth/jwt_private_key_secret_arn` | segredo da chave privada RSA | `fiapx-infra` | Lambdas `login` e `password` |
-| `auth/jwt_public_key` | chave pública RSA (PEM) | `fiapx-infra` | Lambda `authorizer` (o Terraform passa por variável de ambiente), `fiapx-video-api` |
+| `auth/jwt_public_key` | chave pública RSA (PEM) | `fiapx-infra` | Lambda `authorizer` (o Terraform passa por variável de ambiente), `fiapx-video-api` (lê do SSM em execução: o PEM de várias linhas não cabe no `aws.env`) |
 | `auth/authorizer_id` | id do Lambda Authorizer no HTTP API | `fiapx-auth` | `fiapx-video-api` (rotas `/api/videos*`) |
 | `s3/videos_bucket` | bucket de vídeos | `fiapx-infra` | `fiapx-video-api`, `fiapx-video-processor` |
 | `sqs/video-uploaded/url`, `/arn` | fila de eventos do S3 | `fiapx-infra` | `fiapx-video-api` |
 | `sqs/processing-commands/url`, `/arn` | fila de comandos do worker | `fiapx-infra` | `fiapx-video-api`, `fiapx-video-processor` |
 | `sqs/saga-replies/url`, `/arn` | fila FIFO de respostas | `fiapx-infra` | `fiapx-video-api`, `fiapx-video-processor`, `fiapx-notification` |
+| `sns/alerts_topic_arn` | tópico SNS dos alarmes (assinaturas de e-mail do time) | `fiapx-infra` | `fiapx-notification` (alarme da própria DLQ) |
 | `sqs/<fila>-dlq/url` | DLQ de cada fila | `fiapx-infra` e `fiapx-notification` | alarmes, reprocessamento manual |
 | `sqs/notification-commands/url`, `/arn` | fila de comandos de e-mail | `fiapx-notification` | `fiapx-video-api`, `fiapx-auth` |
 | `dynamodb/notifications/table_name` | histórico de e-mails | `fiapx-notification` | `fiapx-notification` |
-| `ses/from_address` | `nao-responda@hackfiapf5.click` | `fiapx-infra` | `fiapx-notification` |
-| `ses/configuration_set` | configuration set do SES | `fiapx-infra` | `fiapx-notification` |
+| `notification/smtp_host` | host do provedor SMTP (`smtp-relay.brevo.com`; `mailpit` no local) | `fiapx-notification` | `fiapx-notification` (variável de ambiente da Lambda) |
+| `notification/smtp_port` | porta SMTP (`587` com STARTTLS; `1025` no Mailpit) | `fiapx-notification` | `fiapx-notification` |
+| `notification/smtp_secret_arn` | ARN do segredo `fiapx/<env>/notification/smtp` | `fiapx-notification` | `fiapx-notification` (a Lambda lê o segredo na inicialização) |
 | `apigw/api_id`, `apigw/vpc_link_id` | API Gateway e VPC Link | `fiapx-infra` | `fiapx-auth` (rotas), `fiapx-video-api` (integração) |
+| `apigw/url` | URL base do HTTP API (`https://<api_id>.execute-api.<região>.amazonaws.com`) | `fiapx-infra` | `fiapx-web` (`VITE_API_BASE_URL=<apigw/url>/api`), smoke tests dos deploys |
 | `alb/target_group_arn` | target group do ALB interno | `fiapx-infra` | `fiapx-video-api` (`TargetGroupBinding`) |
 | `alb/listener_arn` | listener do ALB interno | `fiapx-infra` | `fiapx-video-api` (integração das rotas pelo VPC Link) |
 | `ecr/<repo>/url` | repositório de imagens | `fiapx-infra` | `fiapx-video-api`, `fiapx-video-processor` |
-| `web/bucket`, `web/cloudfront_distribution_id` | hospedagem do front | `fiapx-infra` | `fiapx-web` |
-| `web/url` | URL pública do front | `fiapx-infra` | `fiapx-auth` (link de redefinição), `fiapx-notification` (links dos e-mails) |
+| `web/bucket` | bucket do site (S3 static website) | `fiapx-infra` | `fiapx-web` (`aws s3 sync`) |
+| `web/url` | URL do site, `http://<bucket>.s3-website-us-east-1.amazonaws.com` | `fiapx-infra` | `fiapx-infra` (CORS do API Gateway e do bucket de vídeos), `fiapx-auth` (link de redefinição), `fiapx-notification` (links dos e-mails) |
 
-As chaves de rede, EKS, API Gateway, ALB, ECR e CloudFront existem só em `prod`. No ambiente local, o
-init do LocalStack publica as demais (24 parâmetros).
+As chaves de rede, EKS, API Gateway, ALB, ECR e `web/bucket` existem só em `prod`. No ambiente local, o
+init do LocalStack publica as demais, inclusive as `notification/smtp_*` apontando para o Mailpit (no
+`prod`, essas três são publicadas pelo `fiapx-notification`).
+
+Não há chaves de SES, CloudFront nem Route 53: o e-mail sai por SMTP externo e o site é um S3 static
+website ([ADR-019](../04-adrs/ADR-019-deploy-na-aws-academy-learner-lab.md)).
 
 ## Segredos (Secrets Manager)
 
@@ -49,5 +56,18 @@ init do LocalStack publica as demais (24 parâmetros).
 | `fiapx/<env>/auth/jwt-private-key` | chave privada RSA do JWT (PEM) | Lambdas `login` e `password` |
 | `fiapx/<env>/db/auth` | JSON `{engine, host, port, username, password, dbname}` | `fiapx-auth` |
 | `fiapx/<env>/db/video` | mesmo formato | `fiapx-video-api` |
+| `fiapx/<env>/notification/smtp` | JSON `{user, password, from}`, gravado pelo Terraform do `fiapx-notification` a partir dos GitHub Secrets `SMTP_USER`, `SMTP_PASSWORD` e `SMTP_FROM` | Lambda `notification` (na inicialização) |
 
-No ambiente local, a chave RSA é gerada a cada subida do LocalStack, e nenhuma chave fica versionada.
+No ambiente local, a chave RSA é gerada a cada subida do LocalStack, e nenhuma chave fica versionada. O
+segredo SMTP local aponta para o Mailpit, sem autenticação (usuário e senha vazios, remetente fictício).
+
+## GitHub Secrets
+
+Valores que não podem ir para o SSM porque são necessários antes de o ambiente existir ou porque o
+Terraform os grava no Secrets Manager ([ADR-019](../04-adrs/ADR-019-deploy-na-aws-academy-learner-lab.md)). Sempre **Secrets** (mascarados nos logs), nunca Variables: os
+repositórios são públicos.
+
+| Secret | Onde | Uso |
+|---|---|---|
+| `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_SESSION_TOKEN` | organização `hackathon-fiap-soat` (ou cada repositório, sem acesso de admin) | credenciais da sessão da AWS Academy Learner Lab, atualizadas a cada sessão (~4 h) |
+| `SMTP_USER`, `SMTP_PASSWORD`, `SMTP_FROM` | `fiapx-notification` | credenciais do provedor SMTP (Brevo) e remetente verificado; o Terraform grava em `fiapx/<env>/notification/smtp` |

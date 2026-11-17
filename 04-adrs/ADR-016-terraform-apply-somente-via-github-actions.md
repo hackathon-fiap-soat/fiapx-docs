@@ -1,11 +1,13 @@
 # ADR-016 — `terraform apply` somente via GitHub Actions; apply local apenas para testes (§11.5)
 
-- **Status:** Aceito
+- **Status:** Aceito, parcialmente substituído por [ADR-019](ADR-019-deploy-na-aws-academy-learner-lab.md)
 - **Data:** 2026-11-16
 - **Decisores:** Diego Fenille, Eduardo Santos
 - **Relacionados:** [ADR-002](ADR-002-aws-e-terraform-com-backend-s3-e-lock-nativo.md), [ADR-012](ADR-012-ci-cd-com-github-actions-oidc-e-ordem-de-deploy.md)
 
 > "§11.5" no título refere-se à seção "Política de `terraform apply`" da especificação do projeto (`Projeto-hackton.md`).
+>
+> **Atualização ([ADR-019](ADR-019-deploy-na-aws-academy-learner-lab.md)):** a exceção do bootstrap acabou: **todo** `apply` na AWS é feito pelo GitHub Actions, sem exceção, e o próprio workflow cria o bucket do state. A autenticação é pelas credenciais do lab em GitHub Secrets, não por role OIDC. O apply local fica só no LocalStack (no lab não há perfil AWS SSO por integrante, e o SES deixou de existir). O destroy fora das demonstrações e o `prevent_destroy` continuam.
 
 ## Contexto
 

@@ -1,7 +1,12 @@
 # Fluxo de deploy
 
-Cada repositório tem a própria pipeline no GitHub Actions. A autenticação na AWS usa **OIDC**, com uma
-IAM Role por repositório criada no `fiapx-infra/bootstrap`: não existe access key fixa.
+Cada repositório tem a própria pipeline no GitHub Actions. O `prod` roda na AWS Academy Learner Lab, que
+não permite provedor OIDC nem roles próprias
+([ADR-019](../04-adrs/ADR-019-deploy-na-aws-academy-learner-lab.md)): a autenticação na AWS usa as
+credenciais temporárias da sessão do lab, guardadas em GitHub Secrets (`AWS_ACCESS_KEY_ID`,
+`AWS_SECRET_ACCESS_KEY`, `AWS_SESSION_TOKEN`) e passadas ao `aws-actions/configure-aws-credentials` com a
+região `us-east-1`. Elas são atualizadas a cada sessão do lab
+([procedimento](ambientes.md#sessão-do-lab-e-credenciais)).
 
 ## Princípios
 
@@ -10,8 +15,12 @@ IAM Role por repositório criada no `fiapx-infra/bootstrap`: não existe access 
 - **Checks obrigatórios** em todo PR: lint, testes, cobertura ≥ 80% e Quality Gate do SonarCloud.
 - **Deploy só na `main`**, com o GitHub Environment `prod`.
 - **Imagens imutáveis:** tag igual ao SHA do commit, scan com Trivy (falha em `CRITICAL`).
-- **`terraform apply` só pelo GitHub Actions.** Apply local só no LocalStack ou, quando um teste exigir a
-  AWS real, seguindo a política do [ADR-016](../04-adrs/README.md).
+- **`terraform apply` só pelo GitHub Actions, sem exceção.** Apply local só no LocalStack. Não há bootstrap
+  manual: o primeiro passo de todo job Terraform garante, de forma idempotente, o bucket do state
+  `fiapx-tfstate-<account_id>` (versionado, SSE-S3, Block Public Access) e o passa no
+  `terraform init -backend-config=bucket=...`; o lock é nativo do S3 (`use_lockfile`).
+- **Segredos só em GitHub Secrets**, nunca em Variables: os repositórios são públicos e Variables não são
+  mascaradas nos logs.
 - **Integração por SSM:** cada repositório lê de `/fiapx/<env>/...` os recursos criados por outro; nenhum
   usa `terraform_remote_state`.
 
@@ -21,9 +30,9 @@ IAM Role por repositório criada no `fiapx-infra/bootstrap`: não existe access 
 |---|---|---|
 | `fiapx-docs` | markdownlint, validação dos JSON Schemas e exemplos, lint do OpenAPI (Spectral), renderização dos diagramas Mermaid | GitHub Pages (opcional) |
 | `fiapx-infra` | `fmt -check`, `validate`, `tflint`, `checkov`, `plan` comentado no PR | `apply` no environment `prod` |
-| `fiapx-auth` e `fiapx-notification` | eslint, jest (cobertura ≥ 80%), Sonar, `terraform plan` | build do zip → `terraform apply` → smoke test |
-| `fiapx-web` | eslint, vitest (cobertura ≥ 80%), Sonar, build | build → `s3 sync` → invalidação do CloudFront → smoke com Playwright |
-| `fiapx-video-api` | pint, phpstan (nível 6+), phpunit (cobertura ≥ 80%, com MySQL e LocalStack do `fiapx-infra/local`), behat (SAGA), Sonar, build + Trivy, kustomize + kubeconform, `terraform plan` do `infra/` | `terraform apply` do `infra/` (rotas e role) → push no ECR → Job `migrate` → `kustomize edit set image` → `kubectl apply -k` → `rollout status` → smoke test |
+| `fiapx-auth` e `fiapx-notification` | eslint, jest (cobertura ≥ 80%), Sonar, `terraform plan` | build do zip → `terraform apply` → (auth) invocação da Lambda `migrate`, que aplica as migrations dentro da VPC, porque o runner não alcança o Aurora privado → smoke test |
+| `fiapx-web` | eslint, vitest (cobertura ≥ 80%), Sonar, build | build com `VITE_API_BASE_URL=<apigw/url>/api` (lido do SSM) → `s3 sync` para o bucket do S3 static website → smoke com Playwright na URL do site |
+| `fiapx-video-api` | pint, phpstan (nível 6+), phpunit (cobertura ≥ 80%, com MySQL e LocalStack do `fiapx-infra/local`), behat (SAGA), Sonar, build + Trivy, kustomize + kubeconform, `terraform plan` do `infra/` | push no ECR → `terraform apply` do `infra/` (rotas) → `aws.env` do SSM e Secrets do banco e do app → manifests sem os Deployments → Job `migrate` concluído → Deployments → `rollout status` → smoke test |
 | `fiapx-video-processor` | pint, phpstan, phpunit (inclui integração com `ffmpeg` real e um vídeo de 3 s), Sonar, build + Trivy | push no ECR → `kustomize edit set image` → `kubectl apply -k` → `rollout status` |
 
 Os quatro tipos de pipeline, lado a lado:
@@ -44,22 +53,22 @@ flowchart TB
   end
   subgraph WEB["Front-end: fiapx-web"]
     direction LR
-    W1["PR"] --> W2["eslint"] --> W3["vitest ≥ 80%"] --> W4["SonarCloud"] --> W5["npm run build"] --> W6["merge na main"] --> W7["s3 sync"] --> W8["invalidação<br/>CloudFront"] --> W9["Playwright smoke"]
+    W1["PR"] --> W2["eslint"] --> W3["vitest ≥ 80%"] --> W4["SonarCloud"] --> W5["npm run build"] --> W6["merge na main"] --> W7["build com<br/>URL da API do SSM"] --> W8["s3 sync<br/>S3 website"] --> W9["Playwright smoke"]
   end
   EKS ~~~ LAMBDA ~~~ INFRA ~~~ WEB
 ```
 
-Nos PRs, a pipeline para no merge: só os checks rodam. O deploy começa no merge na `main`, com a
-role OIDC do repositório.
+Nos PRs, a pipeline para no merge: só os checks rodam. O deploy começa no merge na `main`, com as
+credenciais do lab dos GitHub Secrets.
 
-Smoke tests: no `fiapx-auth`, cadastro e login de um usuário de teste; no `fiapx-notification`, envio
-para `success@simulator.amazonses.com` e conferência do item `SENT` no DynamoDB.
+Smoke tests: no `fiapx-auth`, cadastro e login de um usuário de teste; no `fiapx-notification`, um
+`SendNotification` de teste para um e-mail do time e conferência do item `SENT` no DynamoDB.
 
 ## Ordem entre repositórios (primeira subida)
 
 ```mermaid
 flowchart TD
-  B["fiapx-infra/bootstrap<br/>state bucket + OIDC roles<br/>manual, 1 vez"] --> I["fiapx-infra envs/prod<br/>VPC, EKS, Aurora, S3, SQS, SES, ECR, API GW, SSM"]
+  B["bucket do state<br/>fiapx-tfstate-account_id<br/>criado pelo workflow, idempotente"] --> I["fiapx-infra envs/prod<br/>VPC, EKS, Aurora, S3, SQS, ECR, API GW, site, SSM"]
   I --> SQL["create-databases.sql<br/>Job no cluster ou passo do pipeline"]
   SQL --> AUTH["fiapx-auth<br/>migrations + lambdas + rotas /api/auth + authorizer"]
   SQL --> API["fiapx-video-api<br/>migrate + deploy + TargetGroupBinding + rotas /api/videos"]
@@ -68,7 +77,7 @@ flowchart TD
   I --> NOTIF["fiapx-notification<br/>SQS + lambda + DynamoDB<br/>publica URL da fila no SSM"]
   NOTIF --> API
   NOTIF --> AUTH
-  I --> WEB["fiapx-web<br/>build + s3 sync + invalidação"]
+  I --> WEB["fiapx-web<br/>build + s3 sync"]
   API --> E2E["smoke test ponta a ponta<br/>register → login → upload → COMPLETED → download"]
   PROC --> E2E
   NOTIF --> E2E
@@ -77,7 +86,8 @@ flowchart TD
 
 Por que essa ordem:
 
-1. O `bootstrap` cria o bucket do state e as roles OIDC. Sem ele nenhuma pipeline autentica na AWS.
+1. O primeiro passo de cada job Terraform garante o bucket do state. Não há roles para criar: tudo usa a
+   `LabRole` do lab.
 2. O `fiapx-infra` publica no SSM tudo o que os outros repositórios precisam.
 3. Os databases precisam existir antes das migrations do `fiapx-auth` e do `fiapx-video-api`.
 4. O `fiapx-auth` publica e-mails de senha na fila `notification-commands`, criada pelo
@@ -99,8 +109,9 @@ orquestrador no `fiapx-infra` ([ADR-018](../04-adrs/ADR-018-orquestracao-do-depl
 | `destroy-all.yml` | `destroy-prod` | Chama o `destroy.yml` de cada repositório na ordem inversa e destrói a infra por último |
 
 Cada repositório de serviço tem um `deploy.yml` com dois gatilhos, `push` na `main` (merge) e
-`workflow_call` (orquestrador), para que o deploy seja o mesmo nos dois caminhos. A role OIDC de cada
-serviço confia no `deploy.yml` daquele serviço pelo `job_workflow_ref`, seja qual for o chamador.
+`workflow_call` (orquestrador), para que o deploy seja o mesmo nos dois caminhos. Nos dois caminhos o job
+usa as mesmas credenciais do lab (Secrets da organização); com a sessão vencida, o job falha com
+`ExpiredToken` e basta atualizar os Secrets e reexecutar.
 
 Um merge feito com o ambiente destruído gera um deploy que falha ao ler os parâmetros do SSM, com uma
 mensagem dizendo para rodar o `deploy-all`.
