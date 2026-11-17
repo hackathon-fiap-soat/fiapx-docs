@@ -120,7 +120,9 @@ SINCE 1 day ago LIMIT MAX
 ### `VideoSagaTransition` (video-api)
 
 Registrado a cada mudança de estado da saga ou de status do vídeo, depois do commit da transação
-(`newrelic_record_custom_event`, por um adapter na Infrastructure que escuta os eventos de domínio).
+(`newrelic_record_custom_event`, pela porta `Telemetry` com o adapter `NewRelicTelemetry` na Infrastructure).
+Mensagem duplicada, ignorada ou descartada (rollback) não gera evento. O `saga:consume` não termina, então cada
+mensagem é uma transação de background (`SagaConsumer/<tipo>`): o agente envia os eventos quando ela fecha.
 
 | Atributo | Tipo | Descrição |
 |---|---|---|
@@ -130,11 +132,11 @@ Registrado a cada mudança de estado da saga ou de status do vídeo, depois do c
 | `user_id` | string | Dono do vídeo |
 | `from_state` | string | Estado da saga antes (`NONE` na criação) |
 | `to_state` | string | Estado da saga depois (`STARTED`, `UPLOAD_VALIDATED`, `QUOTA_RESERVED`, `PROCESSING_REQUESTED`, `PROCESSING`, `COMPLETED`, `NOTIFIED`, `COMPENSATING`, `COMPENSATED`) |
-| `step` | string | Passo da saga (`ValidateUpload`, `ReserveQuota`, `ProcessVideo`, `CompleteVideo`, `NotifyUser`) ou compensação (`DeleteUploadedObject`, `ReleaseQuota`, `CleanupArtifacts`) |
-| `duration_ms` | número | Tempo que a saga ficou em `from_state` |
-| `video_status` | string | Status do vídeo depois da transição (`PENDING_UPLOAD` … `EXPIRED`) |
-| `trigger` | string | O que causou a transição: tipo da mensagem recebida, `S3ObjectCreated` ou `Timeout` |
-| `failure_reason` | string | Motivo da falha (`INVALID_UPLOAD`, `QUOTA_EXCEEDED`, `FFMPEG_ERROR`, `NO_FRAMES`, `DOWNLOAD_ERROR`, `UPLOAD_ERROR`, `TIMEOUT`), só nas falhas |
+| `step` | string | Passo em execução na transição (`ValidateUpload`, `ReserveQuota`, `ProcessVideo`, `CompleteVideo`, `NotifyUser`) ou, ao entrar em `COMPENSATING`, a compensação iniciada (`DeleteUploadedObject`, `ReleaseQuota`, `CleanupArtifacts`) |
+| `duration_ms` | número | Tempo que a saga ficou em `from_state` (0 em `NONE → STARTED` e na criação do vídeo; na expiração, o tempo em `PENDING_UPLOAD`) |
+| `video_status` | string | Status do vídeo no fim da transação (`PENDING_UPLOAD` … `EXPIRED`); as transições do início da saga saem todas com `QUEUED` |
+| `trigger` | string | O que causou a transição: tipo da mensagem recebida, `S3ObjectCreated`, `Timeout`, `POST /api/videos` (criação) ou `videos:expire-pending` (expiração) |
+| `failure_reason` | string | Motivo da falha (`INVALID_UPLOAD`, `QUOTA_EXCEEDED`, `FFMPEG_ERROR`, `NO_FRAMES`, `DOWNLOAD_ERROR`, `UPLOAD_ERROR`, `PROCESSING_TIMEOUT`), só nas falhas |
 
 Transições do vídeo fora da saga (criação em `PENDING_UPLOAD` pelo `POST /api/videos` e expiração em
 `EXPIRED`) também geram o evento, com `saga_id`, `from_state` e `to_state` vazios e `step` igual a
@@ -155,14 +157,18 @@ Registrado quando o zip foi gravado no S3, antes de publicar a resposta `VideoPr
 | `zip_size_bytes` | número | Tamanho do zip |
 | `reused` | booleano | `true` quando o zip já existia (worker idempotente) e não houve reprocessamento |
 
+No caminho reaproveitado (`reused = true`), `duration_ms` vem dos metadados do zip existente e `ffmpeg_ms` e
+`video_size_bytes` são 0. Por isso as consultas de tempo de processamento filtram `WHERE reused IS false`.
+
 ### `SagaTimeoutCheck` (video-api, apoio aos alertas)
 
 O New Relic não consulta o Aurora, então "sagas presas" é medido pelo próprio `saga:check-timeouts`
-(a cada minuto): antes de compensar, ele conta as sagas em `PROCESSING` com `deadline_at` vencido.
+(a cada minuto): antes de compensar, ele conta as sagas em `PROCESSING_REQUESTED` ou `PROCESSING` com
+`deadline_at` vencido (os mesmos estados que ele compensa).
 
 | Atributo | Tipo | Descrição |
 |---|---|---|
-| `overdue_count` | número | Sagas em `PROCESSING` com `deadline_at` vencido no início da execução |
+| `overdue_count` | número | Sagas em `PROCESSING_REQUESTED` ou `PROCESSING` com `deadline_at` vencido no início da execução |
 | `compensated_count` | número | Sagas cuja compensação foi disparada nessa execução |
 
 Se `overdue_count` continua acima de zero minuto após minuto, a compensação não está andando (relay parado,
@@ -210,7 +216,7 @@ SELECT count(*) AS 'Uploads recebidos (saga iniciada)' FROM VideoSagaTransition 
 **Tempo de processamento p50/p95 (s)** (`viz.line`)
 
 ```sql
-SELECT percentile(duration_ms / 1000, 50, 95) FROM VideoProcessed TIMESERIES 15 minutes SINCE 1 day ago
+SELECT percentile(duration_ms / 1000, 50, 95) FROM VideoProcessed WHERE reused IS false TIMESERIES 15 minutes SINCE 1 day ago
 ```
 
 **Taxa de falha ao longo do tempo (%)** (`viz.line`)
