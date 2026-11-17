@@ -108,6 +108,16 @@ orquestrador no `fiapx-infra` ([ADR-018](../04-adrs/ADR-018-orquestracao-do-depl
 | `deploy-all.yml` | `deploy-prod` (só no disparo manual) | `apply` da infra e `create-databases.sql`, depois chama o `deploy.yml` de cada repositório na ordem e roda o smoke test ponta a ponta. Input opcional `a_partir_de` para retomar uma subida interrompida. **Também roda sozinho**, a partir da notification, depois de todo `apply` com sucesso do `terraform.yml` na `main` (merge no `fiapx-infra`) |
 | `destroy-all.yml` | `destroy-prod` | Chama o `destroy.yml` de cada repositório na ordem inversa e destrói a infra por último |
 
+Na aba Actions eles aparecem como `Deploy-all · sobe o ambiente prod inteiro` e
+`Destroy-all · derruba o ambiente prod inteiro`. Os jobs são numerados pela ordem:
+`0 · Confirmar e definir o ponto de partida`, `1 · Infraestrutura (Terraform apply)`,
+`2 · Notificação (Lambda, fila e tabela)`, `3 · Auth (Lambdas e rotas)`, `4 · Video API (EKS)`,
+`4 · Processor (EKS + KEDA)` e `4 · Site (nginx no EKS)` em paralelo, e `5 · Smoke ponta a ponta`; no
+`destroy-all`, a ordem inversa. O workflow chamado aparece como `<etapa> / Implantar` ou `<etapa> / Remover`.
+O disparo automático depende do nome exibido do `terraform.yml`
+(`Terraform · plan no PR e apply da infraestrutura na main`), que o `deploy-all.yml` escuta em
+`on.workflow_run.workflows`: renomear um exige mudar o outro.
+
 Cada repositório de serviço tem um `deploy.yml` com dois gatilhos, `push` na `main` (merge) e
 `workflow_call` (orquestrador), para que o deploy seja o mesmo nos dois caminhos. Nos dois caminhos o job
 usa as mesmas credenciais do lab (Secrets da organização); com a sessão vencida, o job falha com
@@ -119,9 +129,10 @@ mensagem dizendo para rodar o `deploy-all`.
 No `deploy-all`, cada etapa só roda se a anterior terminou com sucesso, ou se foi pulada de propósito pelo
 `a_partir_de`. Uma falha para a cadeia ali, e o smoke não roda.
 
-O smoke atual confere `GET /api/health/ready` (banco e SQS), cadastro, login, `GET /api/videos` autenticado
-e 401 sem token. Cada etapa nova acrescenta ao smoke o que ela entrega: upload até `COMPLETED` e download
-(processor), item `SENT` no DynamoDB (notification) e a tela de login (web).
+O smoke confere o site (`/` e `/login` servem o `index.html` do SPA), `GET /api/health/ready` (banco e
+SQS), cadastro, login, `GET /api/videos` autenticado, 401 sem token, um vídeo de 3 s do upload até
+`COMPLETED` com o zip de 3 frames, e o e-mail `VIDEO_COMPLETED` registrado no DynamoDB (`SENT` exigido quando
+o Secret `SMTP_FROM` existe; sem ele, só um aviso). Cada etapa nova acrescenta ao smoke o que ela entrega.
 
 ## Teste de deploy ao fim de cada implementação
 
