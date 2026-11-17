@@ -57,7 +57,7 @@ conta) e com credenciais temporárias.
 | Aurora | MySQL 8.0 provisionado `db.t3.medium`, uma instância (sem Multi-AZ, Enhanced Monitoring nem Performance Insights); o lab nega `db.serverless`. A classe é a variável `aurora_instance_class` |
 | Front-end | Pod nginx (`nginxinc/nginx-unprivileged`) com o build do Vite, imagem no ECR `fiapx-web`, no target group `fiapx-prod-web` do ALB interno (padrão do listener). Acesso pela URL HTTPS do API Gateway (rota `$default`), na mesma origem da API |
 | Buckets S3 | A SCP do lab nega `s3:GetBucketObjectLockConfiguration`; os buckets são criados e apagados pelo AWS CLI dentro do Terraform (módulo `s3-bucket`) e as configurações seguem em recursos `aws_s3_bucket_*` |
-| E-mail | SMTP externo (Brevo, `smtp-relay.brevo.com:587`, STARTTLS) |
+| E-mail | SMTP externo (OCI Email Delivery, `smtp.email.sa-saopaulo-1.oci.oraclecloud.com:587`, STARTTLS) |
 | State do Terraform | Bucket `fiapx-tfstate-<account_id>`, criado pelo próprio workflow, lock nativo do S3 |
 | Prefixo dos recursos | `fiapx-prod-*` |
 | Parâmetros | `/fiapx/prod/...` no SSM |
@@ -71,7 +71,7 @@ repositório, se não houver acesso de admin), nunca em Variables:
 | Secret | Origem |
 |---|---|
 | `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_SESSION_TOKEN` | *AWS Details* da sessão do lab |
-| `SMTP_USER`, `SMTP_PASSWORD`, `SMTP_FROM` | conta do time no Brevo (só no `fiapx-notification`) |
+| `SMTP_USER`, `SMTP_PASSWORD`, `SMTP_FROM` | credencial SMTP gerada no OCI Email Delivery (só no `fiapx-notification`) |
 
 Procedimento de cada sessão:
 
@@ -96,7 +96,7 @@ Com tudo ligado, o custo estimado é de **~US$ 10/dia**, abatido do crédito do 
 | NAT Gateway | ~US$ 1,10 + tráfego |
 | ALB interno | ~US$ 0,55 |
 | SQS, S3, Lambda, DynamoDB, API Gateway, CloudWatch | centavos no volume do hackathon |
-| E-mail (Brevo, plano gratuito de 300 e-mails/dia) | zero |
+| E-mail (OCI Email Delivery, camada gratuita) | zero |
 
 Valores aproximados, para orientar a decisão de manter o ambiente desligado fora das demonstrações.
 
@@ -109,7 +109,7 @@ conferida contra elas antes do PR:
 |---|---|---|
 | Sem OIDC, sem criar roles | `iam:CreateRole` negado | credenciais do lab em Secrets; tudo usa a `LabRole` (ADR-019) |
 | `LabRole` não confia em `pods.eks` nem em Metric Streams | sem Pod Identity, sem métricas da AWS no New Relic | pods e KEDA usam a credencial do nó (IMDS com 2 saltos) |
-| SES, CloudFront, Route 53 Domains negados | `AccessDenied` | SMTP externo (Brevo); site no EKS atrás do API Gateway |
+| SES, CloudFront, Route 53 Domains negados | `AccessDenied` | SMTP externo (OCI Email Delivery); site no EKS atrás do API Gateway |
 | Block Public Access da conta | `PutBucketPolicy` público negado | nenhum bucket público |
 | SCP nega `s3:GetBucketObjectLockConfiguration` | `aws_s3_bucket` falha ao ler o bucket | buckets criados pelo AWS CLI no módulo `s3-bucket` |
 | `db.serverless` negado; RDS até `medium` | `rds:CreateDBInstance` negado | Aurora `db.t3.medium` |

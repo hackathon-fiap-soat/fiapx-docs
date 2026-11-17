@@ -8,7 +8,7 @@ Custos citados são estimativas qualitativas ou aproximadas; a fonte da verdade 
 > propostas históricas e não foram reescritas. O deploy na AWS Academy Learner Lab alterou o resultado de
 > cinco delas: **RFC-001** (sem bootstrap nem OIDC; o workflow cria o bucket do state e usa as credenciais
 > do lab), **RFC-007** (Aurora provisionado `db.t3.medium`, porque o lab nega `db.serverless`), **RFC-008**
-> (o e-mail sai por SMTP externo, Brevo, no lugar do SES; o registro no DynamoDB continua), **RFC-009**
+> (o e-mail sai por SMTP externo, OCI Email Delivery, no lugar do SES; o registro no DynamoDB continua), **RFC-009**
 > (front-end num pod nginx no EKS, na mesma origem da API pela rota `$default` do API Gateway, no lugar do
 > CloudFront) e **RFC-010** (sem CloudWatch Metric Streams; métricas de SQS, DLQs, Aurora e API Gateway no CloudWatch).
 

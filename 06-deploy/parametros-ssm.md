@@ -31,7 +31,7 @@ removida.
 | `sqs/<fila>-dlq/url` | DLQ de cada fila | `fiapx-infra` e `fiapx-notification` | alarmes, reprocessamento manual |
 | `sqs/notification-commands/url`, `/arn` | fila de comandos de e-mail | `fiapx-notification` | `fiapx-video-api`, `fiapx-auth` |
 | `dynamodb/notifications/table_name` | histórico de e-mails | `fiapx-notification` | `fiapx-notification` |
-| `notification/smtp_host` | host do provedor SMTP (`smtp-relay.brevo.com`; `mailpit` no local) | `fiapx-notification` | `fiapx-notification` (variável de ambiente da Lambda) |
+| `notification/smtp_host` | host do provedor SMTP (`smtp.email.sa-saopaulo-1.oci.oraclecloud.com`; `mailpit` no local) | `fiapx-notification` | `fiapx-notification` (variável de ambiente da Lambda) |
 | `notification/smtp_port` | porta SMTP (`587` com STARTTLS; `1025` no Mailpit) | `fiapx-notification` | `fiapx-notification` |
 | `notification/smtp_secret_arn` | ARN do segredo `fiapx/<env>/notification/smtp` | `fiapx-notification` | `fiapx-notification` (a Lambda lê o segredo na inicialização) |
 | `apigw/api_id`, `apigw/vpc_link_id` | API Gateway e VPC Link | `fiapx-infra` | `fiapx-auth` (rotas), `fiapx-video-api` e `fiapx-web` (integração; o `fiapx-web` cria a rota `$default`) |
@@ -71,4 +71,4 @@ repositórios são públicos.
 | Secret | Onde | Uso |
 |---|---|---|
 | `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_SESSION_TOKEN` | organização `hackathon-fiap-soat` (ou cada repositório, sem acesso de admin) | credenciais da sessão da AWS Academy Learner Lab, atualizadas a cada sessão (~4 h) |
-| `SMTP_USER`, `SMTP_PASSWORD`, `SMTP_FROM` | `fiapx-notification` | credenciais do provedor SMTP (Brevo) e remetente verificado; o Terraform grava em `fiapx/<env>/notification/smtp` |
+| `SMTP_USER`, `SMTP_PASSWORD`, `SMTP_FROM` | `fiapx-notification` | credenciais do provedor SMTP (OCI Email Delivery) e remetente aprovado; o Terraform grava em `fiapx/<env>/notification/smtp` |

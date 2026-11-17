@@ -63,7 +63,7 @@ flowchart LR
 
 | Frase | Implementação |
 |---|---|
-| Recuperação 1–4 | `POST /api/auth/password/forgot` → Lambda `password` → `password_reset_tokens` (hash) → `SendNotification` `PASSWORD_RESET` → Lambda `notification` → SMTP (Brevo) |
+| Recuperação 1–4 | `POST /api/auth/password/forgot` → Lambda `password` → `password_reset_tokens` (hash) → `SendNotification` `PASSWORD_RESET` → Lambda `notification` → SMTP (OCI Email Delivery) |
 | Recuperação 5 | Tela "Criar nova senha": `POST /api/auth/password/reset/verify` ao abrir o link, depois `POST /api/auth/password/reset` |
 | Recuperação 6–8 | Troca da senha e `used_at` na mesma transação; resposta com JWT; `SendNotification` `PASSWORD_CHANGED` |
 | Troca logado 1–3 | `PUT /api/auth/password` (rota com authorizer) → `SendNotification` `PASSWORD_CHANGED` |

@@ -52,7 +52,7 @@ flowchart LR
 - VPC em 2 AZs. Subnets públicas só com o NAT Gateway (um único, para reduzir custo).
 - EKS, Lambdas, Aurora e ALB em subnets privadas. O ALB interno só é alcançável pelo VPC Link.
 - VPC endpoints para S3 e DynamoDB (gateway, sem custo) e para SQS, Secrets Manager e SSM (interface): o
-  tráfego para esses serviços não sai pela internet. O provedor SMTP (Brevo, porta 587 com STARTTLS) é
+  tráfego para esses serviços não sai pela internet. O provedor SMTP (OCI Email Delivery, porta 587 com STARTTLS) é
   acessado pelo NAT.
 - Security groups por componente, com regras mínimas (Aurora aceita 3306 só dos SGs do EKS e das Lambdas).
 

@@ -12,7 +12,7 @@
 | Componente | Como escala | Limites |
 |---|---|---|
 | S3 (vídeos), API Gateway, SQS, DynamoDB | Gerenciados pela AWS, sem configuração de capacidade | Limites de conta (ex.: 10.000 req/s no API Gateway) |
-| Lambdas `register`, `login`, `authorizer`, `notification` | Concorrência automática | Concorrência reservada na `notification` para não estourar o provedor SMTP (Brevo gratuito: 300 e-mails/dia) |
+| Lambdas `register`, `login`, `authorizer`, `notification` | Concorrência automática | Concorrência reservada na `notification` para não estourar o provedor SMTP (cota da camada gratuita do OCI Email Delivery) |
 | `video-api-web` | HPA por CPU (70%), 2 a 6 réplicas | PDB com `minAvailable: 1` |
 | `video-api-saga-consumer` | KEDA pelas filas `video-uploaded` e `saga-replies.fifo`, 1 a 5 réplicas | A FIFO garante ordem por `saga_id` mesmo com várias réplicas |
 | `video-api-outbox-relay` | 1 a 2 réplicas | `SELECT ... FOR UPDATE SKIP LOCKED` evita publicação dupla entre réplicas |

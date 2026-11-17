@@ -63,7 +63,7 @@ DDD + Clean Architecture, microsserviços, mensageria, SAGA, testes, CI/CD e obs
 | RF2 | Em picos, **não perder nenhuma requisição** | Upload direto ao S3 + evento S3 → SQS (durável) + outbox transacional + DLQ + consumidores idempotentes |
 | RF3 | Sistema protegido por **usuário e senha** | API Gateway + Lambda Node.js (register/login, bcrypt, JWT RS256) + Lambda Authorizer |
 | RF4 | **Listagem de status** dos vídeos do usuário | `GET /api/videos` paginado e filtrado pelo usuário do token |
-| RF5 | Em caso de erro, **notificar o usuário** | A SAGA envia o comando `SendNotification` → Lambda de notificação → e-mail por SMTP num provedor externo (Brevo) |
+| RF5 | Em caso de erro, **notificar o usuário** | A SAGA envia o comando `SendNotification` → Lambda de notificação → e-mail por SMTP num provedor externo (OCI Email Delivery) |
 
 ### Técnicos
 
@@ -99,7 +99,7 @@ DDD + Clean Architecture, microsserviços, mensageria, SAGA, testes, CI/CD e obs
 | Arquitetura de código | **DDD + Clean Architecture** |
 | Processamento | **SAGA orquestrada pela aplicação principal** (Laravel), com estado da saga no Aurora e comandos e respostas via SQS |
 | Observabilidade | **New Relic** (APM PHP, Kubernetes, Lambda, logs e alertas) + **CloudWatch** para os serviços gerenciados (SQS, DLQs, Aurora, API Gateway), com alarmes num tópico SNS com e-mail do time |
-| Notificação | **SQS → Lambda Node.js → SMTP externo** (Nodemailer; provedor **Brevo** por padrão, Mailpit no local), com registro de cada envio em **DynamoDB** (partition key = `email`), em repositório próprio |
+| Notificação | **SQS → Lambda Node.js → SMTP externo** (Nodemailer; provedor **OCI Email Delivery** por padrão, Mailpit no local), com registro de cada envio em **DynamoDB** (partition key = `email`), em repositório próprio |
 | Front-end | SPA mínima **React + Vite + TypeScript + Tailwind**, servida por um pod **nginx** no EKS, em repositório próprio, na **mesma origem** da API: a URL (HTTPS) do API Gateway, cuja rota `$default` leva ao site (ADR-019) |
 | Repositórios | Organização GitHub **[hackathon-fiap-soat](https://github.com/hackathon-fiap-soat)** |
 | CI/CD | **GitHub Actions** com as credenciais temporárias da sessão do lab em **GitHub Secrets** (`AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_SESSION_TOKEN`), atualizadas a cada sessão. `terraform apply` **só via GitHub Actions**, sem exceção; apply local só no LocalStack (§11.5) |
@@ -151,7 +151,7 @@ obrigatório (aprovação opcional), checks obrigatórios (testes + Sonar) e ace
 | 3 | `fiapx-auth` | Lambdas de **register**, **login**, **password** (recuperação e troca de senha) e **authorizer**, rotas `/api/auth/*` no API Gateway, schema `fiapx_auth` | Node.js 24 + Terraform |
 | 4 | `fiapx-video-api` | Aplicação principal: gestão de vídeos, URLs pré-assinadas, listagem de status, download, **orquestrador da SAGA**, outbox, consumidores de eventos/respostas, schema `fiapx_video`, rotas `/api/videos*` (`infra/`) | PHP 8.4.27 + Laravel 13 + Docker + manifests K8s + Terraform |
 | 5 | `fiapx-video-processor` | Worker: consome `ProcessVideo`/`CleanupArtifacts`, baixa o vídeo, `ffmpeg` → frames → zip → S3, responde à SAGA | PHP 8.4.27 + Laravel 13 + ffmpeg + Docker + manifests K8s + KEDA |
-| 6 | `fiapx-notification` | Fila SQS própria → Lambda que envia e-mail por SMTP (Brevo) e registra cada envio no DynamoDB (chave = e-mail); responde à SAGA | Node.js 24 + Nodemailer + DynamoDB + Terraform |
+| 6 | `fiapx-notification` | Fila SQS própria → Lambda que envia e-mail por SMTP (OCI Email Delivery) e registra cada envio no DynamoDB (chave = e-mail); responde à SAGA | Node.js 24 + Nodemailer + DynamoDB + Terraform |
 | 7 | `fiapx-web` | Front-end mínimo: cadastro, login, upload (múltiplos vídeos), lista de status e download. Prompt de layout em [`Prompt-layout-web.md`](Prompt-layout-web.md) | React + Vite + TypeScript + Tailwind, nginx no EKS + Terraform (rota `$default`) |
 
 > Os manifests Kubernetes ficam **no repositório de cada serviço** (`k8s/`). O `fiapx-infra` cria só o cluster e
@@ -199,7 +199,7 @@ flowchart LR
   WRK <--> S3
   WRK -->|respostas| Q_REPLY[[SQS saga-replies.fifo]]
   Q_NOTIF --> LNOTIF[Lambda notification]
-  LNOTIF -->|SMTP| SMTP[Provedor SMTP<br/>Brevo]
+  LNOTIF -->|SMTP| SMTP[Provedor SMTP<br/>OCI Email Delivery]
   LNOTIF <--> DDB[(DynamoDB<br/>notifications<br/>PK = email)]
   LNOTIF -->|respostas| Q_REPLY
   Q_REPLY --> CONS
@@ -474,6 +474,7 @@ Frames, Pacote zip, Link de download, E-mail.
 | 017 | Recuperação e troca de senha no `fiapx-auth`, com e-mail pelo `fiapx-notification` |
 | 018 | Orquestração do deploy no GitHub Actions: `deploy-all.yml` e `destroy-all.yml` no `fiapx-infra`, chamando o `deploy.yml` reutilizável de cada repositório |
 | 019 | Deploy na AWS Academy Learner Lab: credenciais do lab em GitHub Secrets, `LabRole`, SMTP externo e site no EKS atrás do mesmo API Gateway (substitui o ADR-015 e partes dos ADRs 002, 005, 009–014 e 016) |
+| 020 | E-mail pelo OCI Email Delivery no lugar do OCI Email Delivery (provedor SMTP do ADR-019) |
 
 **RFCs obrigatórias** (`05-rfcs/RFC-NNN-titulo.md`, cada uma com alternativas comparadas em tabela):
 
@@ -682,7 +683,7 @@ fiapx-notification/
 ├── src/
 │   ├── domain/           # Notification (entidade), Recipient/Email (VO), NotificationStatus, Template
 │   ├── application/      # SendNotificationUseCase + ports (EmailSender, NotificationRepository, ReplyPublisher)
-│   ├── infrastructure/   # SmtpEmailSender (Nodemailer: Brevo na AWS, Mailpit local), DynamoNotificationRepository, SqsReplyPublisher
+│   ├── infrastructure/   # SmtpEmailSender (Nodemailer: OCI Email Delivery na AWS, Mailpit local), DynamoNotificationRepository, SqsReplyPublisher
 │   ├── templates/        # video-failed, video-completed, password-reset, password-changed (.html e .txt, pt-BR)
 │   └── handlers/         # sqs-handler.js (entrada)
 ├── tests/                # jest: unit + integração (DynamoDB/SQS no LocalStack, SMTP no Mailpit)
@@ -699,7 +700,7 @@ sequenceDiagram
   participant Q as SQS notification-commands
   participant L as Lambda notification
   participant D as DynamoDB notifications
-  participant S as Provedor SMTP (Brevo)
+  participant S as Provedor SMTP (OCI Email Delivery)
   participant R as SQS saga-replies.fifo
   V->>Q: SendNotification
   Q->>L: lote (batch size 10)
@@ -758,19 +759,21 @@ criptografia padrão.
   uma cópia dos schemas, e um contract test garante que ela é igual à do `fiapx-docs`.
 - Templates em pt-BR, com nome do vídeo, motivo da falha legível (`FFMPEG_ERROR` → "O arquivo de vídeo
   está corrompido ou em um formato que não conseguimos ler") e link para o front-end (`/web/url`).
-- Um só adaptador SMTP: local envia para o **Mailpit**; na AWS, para o provedor externo (Brevo) (§8.6.4).
+- Um só adaptador SMTP: local envia para o **Mailpit**; na AWS, para o provedor externo (OCI Email Delivery) (§8.6.4).
 
 #### 8.6.4 Envio de e-mail por SMTP externo
 
-**Decisão do time (ADR-019): SMTP autenticado num provedor externo, no lugar do SES** (negado na AWS
+**Decisão do time (ADR-019 e ADR-020): SMTP autenticado num provedor externo, no lugar do SES** (negado na AWS
 Academy Learner Lab). O ADR-015 (domínio `hackfiapf5.click` no Route 53 e sandbox do SES) deixou de valer.
 
-- Provedor padrão: **Brevo** (`smtp-relay.brevo.com:587`, STARTTLS, plano gratuito de 300 e-mails/dia).
+- Provedor: **OCI Email Delivery** (`smtp.email.sa-saopaulo-1.oci.oraclecloud.com:587`, STARTTLS, camada gratuita da Oracle Cloud; ADR-020,
+  no lugar do OCI Email Delivery, que aceitava mas não entregava as mensagens).
   Qualquer provedor SMTP serve: host, porta, usuário, senha e remetente são configuração.
 - Envio pelo **Nodemailer** (`SmtpEmailSender`), o mesmo adaptador nos dois ambientes.
-- Remetente (`SMTP_FROM`): um e-mail do time verificado no provedor (single sender), com nome de exibição
-  "FIAP X". Não há domínio próprio, Route 53, DKIM/SPF/DMARC nem sandbox.
-- Credenciais: GitHub Secrets `SMTP_USER`, `SMTP_PASSWORD` e `SMTP_FROM` no `fiapx-notification`. O Terraform
+- Remetente (`SMTP_FROM`): um **Approved Sender** do OCI num domínio do time, com nome de exibição "SOAT
+  FIAP". Não há Route 53 nem sandbox; SPF e DKIM do domínio são opcionais (sem eles, o e-mail pode cair no spam).
+- Credenciais: GitHub Secrets `SMTP_USER`, `SMTP_PASSWORD` (credencial SMTP gerada no OCI) e `SMTP_FROM` no
+  `fiapx-notification` e no `fiapx-infra` (o `deploy-all` repassa com `secrets: inherit`). O Terraform
   grava tudo no secret `fiapx/<env>/notification/smtp` do Secrets Manager, lido pela Lambda na inicialização.
   Host e porta ficam no SSM (`/fiapx/<env>/notification/smtp_host` e `/smtp_port`), e o ARN do secret em
   `/fiapx/<env>/notification/smtp_secret_arn`.
@@ -998,7 +1001,7 @@ Lambdas → reverter o PR (alias/versão anterior); infra → reverter o PR + `a
 ### 11.4 Custos
 
 Com tudo ligado, o `prod` custa **~US$ 10/dia**, abatido do crédito do lab: EKS ~2,40; 2× `t3.large`
-on-demand ~4,00; Aurora ~1,50; NAT ~1,10; ALB ~0,55 (por dia). O e-mail (Brevo gratuito) não tem custo. Ao
+on-demand ~4,00; Aurora ~1,50; NAT ~1,10; ALB ~0,55 (por dia). O e-mail (camada gratuita do OCI Email Delivery) não tem custo. Ao
 fim da sessão o lab pode parar os nós do EKS, mas EKS, NAT, ALB e Aurora continuam cobrando: ao terminar a
 demonstração, rodar o `destroy-all.yml` (procedimento em `06-deploy/ambientes.md`). Desenvolvimento e
 testes rodam **localmente** com `fiapx-infra/local/docker-compose.yml`.
@@ -1040,7 +1043,7 @@ e `destroy-all` no fim. Infraestrutura nova é conferida antes contra as
 ### Etapa 1 — Documentação (fiapx-docs) 🛑
 
 - Escrever **tudo** do §8.1: visão geral, linguagem ubíqua, 6 Domain Storytellings, C4 (contexto,
-  containers, componentes), sequências, SAGA, modelo de dados, segurança, escalabilidade, **19 ADRs**,
+  containers, componentes), sequências, SAGA, modelo de dados, segurança, escalabilidade, **20 ADRs**,
   **10 RFCs**, fluxo de deploy, ambientes, observabilidade, JSON Schemas dos contratos, OpenAPI, roteiro do
   vídeo e rascunho do documento de entrega.
 - **DoD:** lint verde e diagramas Mermaid renderizando. **Parar e pedir revisão do time** antes de escrever
@@ -1085,12 +1088,12 @@ e `destroy-all` no fim. Infraestrutura nova é conferida antes contra as
 
 ### Etapa 6 — fiapx-notification
 
-- Domínio, use case, handler SQS, templates, adaptador SMTP (Nodemailer: Brevo/Mailpit, §8.6.4), repositório DynamoDB (§8.6.2), respostas à
+- Domínio, use case, handler SQS, templates, adaptador SMTP (Nodemailer: OCI Email Delivery/Mailpit, §8.6.4), repositório DynamoDB (§8.6.2), respostas à
   saga, Terraform (fila + DLQ + Lambda + tabela), testes.
 - **DoD:** vídeo inválido no fluxo local gera um e-mail no Mailpit, um item `SENT` no DynamoDB (LocalStack)
   com PK = e-mail do usuário, e a saga termina em `NOTIFIED`. Mensagem duplicada não gera segundo e-mail.
   O e-mail de redefinição pedido ao `fiapx-auth` também chega ao Mailpit (pendência da Etapa 3).
-  **Na AWS:** Lambda por SMTP (Brevo), smoke com um `SendNotification` de teste para um e-mail do time e
+  **Na AWS:** Lambda por SMTP (OCI Email Delivery), smoke com um `SendNotification` de teste para um e-mail do time e
   item `SENT` no DynamoDB; `destroy-all` no fim.
 
 ### Etapa 6.5 — fiapx-web
@@ -1171,7 +1174,7 @@ e `destroy-all` no fim. Infraestrutura nova é conferida antes contra as
 
 - [ ] Domain Storytelling (6 histórias)
 - [ ] C4 (contexto, containers, componentes) e diagramas de sequência
-- [ ] 19 ADRs e 10 RFCs
+- [ ] 20 ADRs e 10 RFCs
 - [ ] Imagens PNG/SVG de todos os diagramas (`fiapx-docs/diagramas/`, por assunto)
 - [ ] SAGA documentada (passos, estados, compensações)
 - [ ] Fluxo de deploy e ambientes
@@ -1183,7 +1186,7 @@ e `destroy-all` no fim. Infraestrutura nova é conferida antes contra as
 
 - [ ] 7 repositórios em <https://github.com/hackathon-fiap-soat> com README (propósito, stack, como rodar, diagrama, links)
 - [ ] Front-end publicado na URL do API Gateway (link no PDF de entrega)
-- [ ] Remetente verificado no provedor SMTP (Brevo) e histórico de envios no DynamoDB
+- [ ] Remetente aprovado no provedor SMTP (OCI Email Delivery) e histórico de envios no DynamoDB
 - [ ] `main` protegida + PR obrigatório + checks
 - [ ] Cobertura ≥ 80% em cada serviço + BDD da SAGA + SonarCloud aprovado
 - [ ] CI/CD com deploy automático (EKS e Lambdas)

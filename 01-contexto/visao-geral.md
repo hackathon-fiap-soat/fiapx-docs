@@ -26,7 +26,7 @@ aplicando arquitetura de software, microsserviços, mensageria, qualidade e CI/C
 | RF2 | Em picos, não perder nenhuma requisição | Upload direto ao S3, evento S3 → SQS (durável), transactional outbox, DLQ e consumidores idempotentes |
 | RF3 | Sistema protegido por usuário e senha | API Gateway + Lambdas Node.js (cadastro e login com bcrypt, JWT RS256) + Lambda Authorizer |
 | RF4 | Listagem de status dos vídeos do usuário | `GET /api/videos`, paginado e filtrado pelo usuário do token |
-| RF5 | Notificar o usuário em caso de erro | A SAGA envia `SendNotification` → Lambda de notificação → e-mail por SMTP num provedor externo (Brevo) |
+| RF5 | Notificar o usuário em caso de erro | A SAGA envia `SendNotification` → Lambda de notificação → e-mail por SMTP num provedor externo (OCI Email Delivery) |
 
 ## Requisitos técnicos
 

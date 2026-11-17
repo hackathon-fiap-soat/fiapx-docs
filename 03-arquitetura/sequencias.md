@@ -89,7 +89,7 @@ sequenceDiagram
   participant QN as SQS notification-commands
   participant N as Lambda notification
   participant DD as DynamoDB notifications
-  participant SMTP as Provedor SMTP (Brevo)
+  participant SMTP as Provedor SMTP (OCI Email Delivery)
   actor U as Usuário
 
   P->>P: ffmpeg falha (arquivo corrompido)
@@ -173,7 +173,7 @@ sequenceDiagram
   participant DB as Aurora fiapx_auth
   participant QN as SQS notification-commands
   participant N as Lambda notification
-  participant SMTP as Provedor SMTP (Brevo)
+  participant SMTP as Provedor SMTP (OCI Email Delivery)
 
   U->>GW: POST /api/auth/password/forgot {email}
   GW->>PW: invoca (sem authorizer, rate limit restrito)
