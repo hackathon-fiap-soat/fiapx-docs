@@ -147,7 +147,7 @@
                 "accountIds": [
                   0
                 ],
-                "query": "SELECT percentile(duration_ms / 1000, 50, 95) FROM VideoProcessed TIMESERIES 15 minutes SINCE 1 day ago"
+                "query": "SELECT percentile(duration_ms / 1000, 50, 95) FROM VideoProcessed WHERE reused IS false TIMESERIES 15 minutes SINCE 1 day ago"
               }
             ],
             "platformOptions": {
