@@ -3,7 +3,7 @@
 | Ambiente | Onde | Para quê |
 |---|---|---|
 | `local` | Máquina de cada integrante, com `docker compose` | Desenvolvimento, testes de integração e testes do Terraform no LocalStack |
-| `prod` | Conta AWS do time, região `us-east-1` | Demonstração, teste de carga e gravação do vídeo |
+| `prod` | Conta da AWS Academy Learner Lab, região `us-east-1` ([ADR-019](../04-adrs/ADR-019-deploy-na-aws-academy-learner-lab.md)) | Demonstração, teste de carga e gravação do vídeo |
 
 Não há ambiente de homologação: o custo do EKS, do NAT e do Aurora dobraria. A qualidade antes do
 `prod` vem dos testes no PR e do ambiente local.
@@ -22,8 +22,8 @@ docker compose up -d --wait   # sobe e espera os scripts de init
 | Serviço | Imagem | Substitui | Endereço |
 |---|---|---|---|
 | MySQL | `mysql:8.0` | Aurora MySQL | `localhost:3306` |
-| LocalStack | `localstack/localstack:4.14.0` (S3, SQS, SES, SSM, Secrets Manager, DynamoDB, Lambda, API Gateway, IAM) | Serviços AWS | `http://localhost:4566` |
-| Mailpit | `axllent/mailpit:v1.33.1` | Caixa de entrada (o `fiapx-notification` usa `EMAIL_DRIVER=smtp`) | UI `http://localhost:8025`, SMTP `localhost:1025` |
+| LocalStack | `localstack/localstack:4.14.0` (S3, SQS, SSM, Secrets Manager, DynamoDB, Lambda, API Gateway, IAM) | Serviços AWS | `http://localhost:4566` |
+| Mailpit | `axllent/mailpit:v1.33.1` | Provedor SMTP (o `fiapx-notification` usa o mesmo adaptador SMTP, apontado para `mailpit:1025` sem autenticação) | UI `http://localhost:8025`, SMTP `localhost:1025` |
 
 Containers de outros repositórios entram na rede `fiapx_default` e chegam ao LocalStack pelo host `localstack`.
 As URLs que o LocalStack devolve (ex.: filas em `sqs.us-east-1.localhost.localstack.cloud`) também funcionam
@@ -42,42 +42,74 @@ O EKS não é simulado localmente: o `video-api` e o `video-processor` rodam com
 
 Terraform local: `tflocal` com state em `.terraform-local/` (no `.gitignore`).
 
-## Produção (AWS)
+## Produção (AWS Academy Learner Lab)
+
+O `prod` roda numa conta da AWS Academy Learner Lab, com as restrições e escolhas do
+[ADR-019](../04-adrs/ADR-019-deploy-na-aws-academy-learner-lab.md): sem roles próprias (tudo usa a
+`LabRole`), sem SES nem CloudFront, sem spot e com credenciais temporárias.
 
 | Recurso | Configuração |
 |---|---|
-| Região | `us-east-1` (configurável) |
+| Região | `us-east-1` |
 | Rede | VPC em 2 AZs, 1 NAT Gateway |
-| EKS | 1 managed node group (instâncias spot quando possível), add-ons: AWS Load Balancer Controller, metrics-server, KEDA, New Relic `nri-bundle` |
-| Aurora | MySQL Serverless v2, de 0,5 a 4 ACU |
+| EKS | 1 managed node group **on-demand** `t3.large` (2 vCPU, 8 GiB), mínimo 2 e máximo 4 nós (8 vCPUs no teto, abaixo do limite do lab de 32 vCPUs e 9 instâncias); cluster e nós com a `LabRole`; launch template com `http_put_response_hop_limit = 2` para os pods usarem a `LabRole` pelo IMDS. Add-ons: AWS Load Balancer Controller, metrics-server, KEDA (`identityOwner: keda`), New Relic `nri-bundle` |
+| Aurora | MySQL 8.0 Serverless v2, de 0,5 a 2 ACU, uma instância (sem Multi-AZ, Enhanced Monitoring nem Performance Insights). Se o lab recusar `db.serverless`, `aurora_instance_class = "db.t4g.medium"` |
+| Front-end | Bucket `fiapx-prod-web-<account_id>` com S3 static website (HTTP), `index.html` como documento de erro |
+| E-mail | SMTP externo (Brevo, `smtp-relay.brevo.com:587`, STARTTLS) |
+| State do Terraform | Bucket `fiapx-tfstate-<account_id>`, criado pelo próprio workflow, lock nativo do S3 |
 | Prefixo dos recursos | `fiapx-prod-*` |
 | Parâmetros | `/fiapx/prod/...` no SSM |
 
+## Sessão do lab e credenciais
+
+As credenciais da conta são temporárias (`AWS_SESSION_TOKEN`) e valem enquanto a sessão do lab estiver
+aberta (~4 h). Elas ficam em GitHub Secrets **da organização** `hackathon-fiap-soat` (ou de cada
+repositório, se não houver acesso de admin), nunca em Variables:
+
+| Secret | Origem |
+|---|---|
+| `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_SESSION_TOKEN` | *AWS Details* da sessão do lab |
+| `SMTP_USER`, `SMTP_PASSWORD`, `SMTP_FROM` | conta do time no Brevo (só no `fiapx-notification`) |
+
+Procedimento de cada sessão:
+
+1. Iniciar a sessão no AWS Academy (*Start Lab*) e esperar o indicador ficar verde.
+2. Abrir *AWS Details* e copiar `aws_access_key_id`, `aws_secret_access_key` e `aws_session_token` para os
+   três Secrets do GitHub.
+3. Rodar o `deploy-all.yml` no `fiapx-infra` (~30 min, cabe numa sessão de 4 h) ou fazer os merges do dia.
+4. Um job com credencial vencida falha na primeira chamada (`ExpiredToken`): atualizar os Secrets e
+   reexecutar o job.
+5. Ao terminar a demonstração, rodar o `destroy-all.yml`. Ao fim da sessão o lab pode **parar** os nós do
+   EKS, mas EKS, NAT, ALB e Aurora continuam cobrando.
+
 ## Custos
 
-Os itens mais caros ficam ligados o tempo todo enquanto o ambiente existir:
+Com tudo ligado, o custo estimado é de **~US$ 10/dia**, abatido do crédito do lab:
 
-| Item | Custo aproximado |
+| Item | Custo aproximado por dia |
 |---|---|
-| EKS (control plane) | ~US$ 73/mês |
-| NAT Gateway | ~US$ 33/mês + tráfego |
-| Aurora Serverless v2 (0,5 ACU mínimo) | ~US$ 45/mês |
-| Nós do EKS | conforme tipo e quantidade (spot reduz bastante) |
-| Domínio `hackfiapf5.click` + hosted zone | ~US$ 3–15/ano + US$ 0,50/mês |
-| SQS, S3, Lambda, DynamoDB, SES, CloudFront | centavos no volume do hackathon |
+| EKS (control plane) | ~US$ 2,40 |
+| Nós do EKS (2× `t3.large` on-demand) | ~US$ 4,00 |
+| Aurora Serverless v2 (0,5 ACU mínimo) | ~US$ 1,50 |
+| NAT Gateway | ~US$ 1,10 + tráfego |
+| ALB interno | ~US$ 0,55 |
+| SQS, S3, Lambda, DynamoDB, API Gateway, CloudWatch | centavos no volume do hackathon |
+| E-mail (Brevo, plano gratuito de 300 e-mails/dia) | zero |
 
 Valores aproximados, para orientar a decisão de manter o ambiente desligado fora das demonstrações.
 
 ## Desligar e religar
 
-Para manter o custo baixo, o ambiente `prod` é destruído fora das demonstrações:
+Para não consumir o crédito do lab, o ambiente `prod` é destruído fora das demonstrações:
 
-1. Rodar o workflow manual `destroy-all.yml` no `fiapx-infra`, digitando a confirmação `destroy-prod`.
+1. Com a sessão do lab aberta e os Secrets atualizados, rodar o workflow manual `destroy-all.yml` no
+   `fiapx-infra`, digitando a confirmação `destroy-prod`.
 2. O workflow desliga o `prevent_destroy` (Aurora, bucket de vídeos e tabela DynamoDB) por variável
    explícita e derruba tudo na ordem inversa da subida: front-end, aplicações do EKS, Lambdas e por fim a
    infraestrutura ([ADR-018](../04-adrs/ADR-018-orquestracao-do-deploy-no-github-actions.md)).
-3. Ficam de pé só o bucket do state, as roles OIDC (`bootstrap`), o domínio registrado e a hosted zone.
+3. Fica de pé só o bucket do state (`fiapx-tfstate-<account_id>`).
 
 Para religar, rodar o workflow manual `deploy-all.yml` no `fiapx-infra`, digitando `deploy-prod`. Ele
 segue a [ordem de deploy](fluxo-de-deploy.md#ordem-entre-repositórios-primeira-subida) e termina com o
-smoke test ponta a ponta.
+smoke test ponta a ponta. Como o tópico SNS dos alarmes é recriado a cada subida, cada integrante confirma
+de novo a assinatura no e-mail que a AWS envia.

@@ -11,13 +11,13 @@
 
 | Componente | Como escala | Limites |
 |---|---|---|
-| CloudFront, S3, API Gateway, SQS, DynamoDB | Gerenciados pela AWS, sem configuração de capacidade | Limites de conta (ex.: 10.000 req/s no API Gateway) |
-| Lambdas `register`, `login`, `authorizer`, `notification` | Concorrência automática | Concorrência reservada na `notification` para não estourar o SES (sandbox: 1 e-mail/s) |
+| S3 (vídeos e site), API Gateway, SQS, DynamoDB | Gerenciados pela AWS, sem configuração de capacidade | Limites de conta (ex.: 10.000 req/s no API Gateway) |
+| Lambdas `register`, `login`, `authorizer`, `notification` | Concorrência automática | Concorrência reservada na `notification` para não estourar o provedor SMTP (Brevo gratuito: 300 e-mails/dia) |
 | `video-api-web` | HPA por CPU (70%), 2 a 6 réplicas | PDB com `minAvailable: 1` |
 | `video-api-saga-consumer` | KEDA pelas filas `video-uploaded` e `saga-replies.fifo`, 1 a 5 réplicas | A FIFO garante ordem por `saga_id` mesmo com várias réplicas |
 | `video-api-outbox-relay` | 1 a 2 réplicas | `SELECT ... FOR UPDATE SKIP LOCKED` evita publicação dupla entre réplicas |
-| `video-processor` | KEDA `aws-sqs-queue`, 1 a 10 réplicas | `emptyDir` de 10Gi por pod; nós do managed node group escalam com o cluster autoscaler ou Karpenter |
-| Aurora MySQL | Serverless v2, de 0,5 a 4 ACU | Leituras e escritas são curtas; o arquivo nunca passa pelo banco |
+| `video-processor` | KEDA `aws-sqs-queue`, 1 a 10 réplicas | `emptyDir` de 10Gi por pod; o managed node group (on-demand `t3.large`) vai de 2 a 4 nós, teto de 8 vCPUs dentro do limite do lab ([ADR-019](../04-adrs/ADR-019-deploy-na-aws-academy-learner-lab.md)) |
+| Aurora MySQL | Serverless v2, de 0,5 a 2 ACU, uma instância (o lab não tem Multi-AZ); alternativa `db.t4g.medium` se o lab recusar `db.serverless` | Leituras e escritas são curtas; o arquivo nunca passa pelo banco |
 
 ```mermaid
 flowchart LR
@@ -39,8 +39,8 @@ flowchart LR
 | Pod do processor morre no meio do `ffmpeg` | A mensagem volta à fila quando o heartbeat para | Outro pod reprocessa; se o zip já existir, só responde `VideoProcessed` |
 | Erro transitório no S3 ou na rede | O worker não apaga a mensagem | Até 3 tentativas; depois DLQ e compensação por timeout (30 min) |
 | Vídeo corrompido | Falha definitiva | `VideoProcessingFailed` imediato, compensação e e-mail |
-| SES indisponível | Item fica `FAILED` no DynamoDB, a mensagem volta (`ReportBatchItemFailures`) | Até 3 tentativas; depois `NotificationFailed`, DLQ e alerta |
-| Aurora escalando ou em failover | Erros de conexão por alguns segundos | Retry com backoff nos consumidores; mensagens permanecem nas filas |
+| Provedor SMTP indisponível | Item fica `FAILED` no DynamoDB, a mensagem volta (`ReportBatchItemFailures`) | Até 3 tentativas; depois `NotificationFailed`, DLQ e alerta |
+| Aurora escalando ou reiniciando | Erros de conexão por alguns segundos | Retry com backoff nos consumidores; mensagens permanecem nas filas |
 | Deploy do processor durante um vídeo | `SIGTERM` tratado com `pcntl`: termina o vídeo atual e para de pegar mensagens | `terminationGracePeriodSeconds` maior que o tempo máximo esperado de processamento |
 
 ## Retentativas e prazos
@@ -64,5 +64,5 @@ avisado para reenviar.
 ## Validação de carga
 
 Na Etapa 10, um script k6 (`tests/load/`) envia 30 vídeos curtos em 1 minuto. As evidências esperadas
-são a fila crescendo, o KEDA escalando o worker, todos os vídeos em `COMPLETED` e nenhuma mensagem nas
-DLQs.
+são a fila crescendo (CloudWatch), o KEDA escalando o worker (New Relic), todos os vídeos em `COMPLETED` e
+nenhuma mensagem nas DLQs.

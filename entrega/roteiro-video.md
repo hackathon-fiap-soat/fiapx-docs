@@ -11,17 +11,20 @@ com 30 s de folga.
 | 3:40–4:20 | Infra e CI/CD | Organização no GitHub, `main` protegida, uma pipeline verde, SonarCloud, `deploy-all` subindo os serviços na ordem | a definir |
 | 4:20–6:40 | Demonstração | Cadastro → login → upload de 3 vídeos ao mesmo tempo → status mudando sozinho → download de um zip e abertura das imagens | a definir |
 | 6:40–7:40 | Falha | Upload de um vídeo corrompido → status `FAILED` com motivo legível → e-mail recebido → item `SENT` no DynamoDB | a definir |
-| 7:40–8:50 | Escala | Teste k6 com 30 vídeos: fila crescendo, KEDA subindo pods (`kubectl get pods -w` ou dashboard), todos `COMPLETED`, DLQs vazias | a definir |
-| 8:50–9:30 | Observabilidade e fechamento | Dashboard do New Relic (status, p95, filas, réplicas), alertas, e resumo de como cada requisito foi atendido | a definir |
+| 7:40–8:50 | Escala | Teste k6 com 30 vídeos: fila crescendo (CloudWatch), KEDA subindo pods (`kubectl get pods -w` ou dashboard), todos `COMPLETED`, DLQs vazias | a definir |
+| 8:50–9:30 | Observabilidade e fechamento | Dashboard do New Relic (status, p95, réplicas, Lambdas), alarmes do CloudWatch (filas e DLQs), e resumo de como cada requisito foi atendido | a definir |
 
 ## Preparação antes de gravar
 
+- [ ] Sessão da AWS Academy Learner Lab iniciada e os 3 Secrets `AWS_*` atualizados no GitHub (a sessão
+      dura ~4 h: gravar logo depois do `deploy-all`).
 - [ ] Ambiente `prod` no ar pelo `deploy-all.yml` (fiapx-infra), com o smoke test ponta a ponta verde.
-- [ ] Usuário de demonstração cadastrado e com e-mail verificado no SES (sandbox).
+- [ ] Usuário de demonstração cadastrado com um e-mail real (o e-mail sai pelo provedor SMTP; conferir a
+      caixa de spam).
 - [ ] Três vídeos curtos válidos e um arquivo corrompido com extensão `.mp4`.
 - [ ] Dashboard do New Relic aberto no intervalo certo.
 - [ ] Script k6 testado uma vez antes da gravação.
-- [ ] Abas abertas: documentação, front-end, AWS Console (SQS e DynamoDB), New Relic, GitHub Actions.
+- [ ] Abas abertas: documentação, front-end, AWS Console (SQS, CloudWatch e DynamoDB), New Relic, GitHub Actions.
 
 ## Depois de gravar
 

@@ -26,7 +26,7 @@ aplicando arquitetura de software, microsserviços, mensageria, qualidade e CI/C
 | RF2 | Em picos, não perder nenhuma requisição | Upload direto ao S3, evento S3 → SQS (durável), transactional outbox, DLQ e consumidores idempotentes |
 | RF3 | Sistema protegido por usuário e senha | API Gateway + Lambdas Node.js (cadastro e login com bcrypt, JWT RS256) + Lambda Authorizer |
 | RF4 | Listagem de status dos vídeos do usuário | `GET /api/videos`, paginado e filtrado pelo usuário do token |
-| RF5 | Notificar o usuário em caso de erro | A SAGA envia `SendNotification` → Lambda de notificação → e-mail via Amazon SES |
+| RF5 | Notificar o usuário em caso de erro | A SAGA envia `SendNotification` → Lambda de notificação → e-mail por SMTP num provedor externo (Brevo) |
 
 ## Requisitos técnicos
 
@@ -36,7 +36,7 @@ aplicando arquitetura de software, microsserviços, mensageria, qualidade e CI/C
 | RT2 | Arquitetura escalável | EKS + HPA (API) + KEDA (worker) + serviços gerenciados (SQS, S3, Aurora Serverless v2, Lambda) |
 | RT3 | Versionamento no GitHub | Sete repositórios na organização [`hackathon-fiap-soat`](https://github.com/hackathon-fiap-soat) |
 | RT4 | Testes que garantam a qualidade | Cobertura ≥ 80% por repositório, BDD da SAGA, contract tests e SonarCloud no CI |
-| RT5 | CI/CD | GitHub Actions por repositório, OIDC na AWS e deploy automático na `main` |
+| RT5 | CI/CD | GitHub Actions por repositório, credenciais da AWS Academy Learner Lab em GitHub Secrets e deploy automático na `main` |
 
 ## Entregáveis do enunciado
 
@@ -70,7 +70,8 @@ ffmpeg -i <video> -vf fps=1 -y <tempDir>/frame_%04d.png   # extrai 1 frame por s
 
 **Dentro do escopo:** cadastro e login, recuperação e troca de senha, upload de vários vídeos, processamento assíncrono, listagem de
 status, download do zip, e-mail de falha (e, opcionalmente, de conclusão), infraestrutura na AWS por
-Terraform, CI/CD, observabilidade e teste de carga.
+Terraform (numa conta da AWS Academy Learner Lab,
+[ADR-019](../04-adrs/ADR-019-deploy-na-aws-academy-learner-lab.md)), CI/CD, observabilidade e teste de carga.
 
 **Fora do escopo:** edição dos dados de perfil, compartilhamento de vídeos entre usuários,
 escolha de outra taxa de frames pelo usuário e múltiplos ambientes além de `local` e `prod`.

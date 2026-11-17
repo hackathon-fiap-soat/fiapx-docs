@@ -1,9 +1,11 @@
 # ADR-009 — Worker Laravel no EKS escalado por KEDA (1 vídeo por pod, heartbeat de visibility)
 
-- **Status:** Aceito
+- **Status:** Aceito, parcialmente substituído por [ADR-019](ADR-019-deploy-na-aws-academy-learner-lab.md)
 - **Data:** 2026-11-16
 - **Decisores:** Diego Fenille, Eduardo Santos
 - **Relacionados:** RFC-005 (escala do processamento), [ADR-003](ADR-003-ddd-e-clean-architecture-nos-servicos-laravel.md), [ADR-007](ADR-007-amazon-sqs-como-mensageria.md), [ADR-008](ADR-008-saga-orquestrada-com-outbox-e-consumidores-idempotentes.md)
+
+> **Atualização ([ADR-019](ADR-019-deploy-na-aws-academy-learner-lab.md)):** no lab não há EKS Pod Identity nem role própria: os pods do worker usam as credenciais da `LabRole` dos nós pelo IMDS (`http_put_response_hop_limit = 2`), e o KEDA usa a identidade do operador (`identityOwner: keda`). Os nós são on-demand `t3.large` (2 a 4), sem spot. O resto deste ADR continua.
 
 ## Contexto
 

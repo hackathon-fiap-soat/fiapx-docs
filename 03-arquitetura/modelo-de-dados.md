@@ -1,6 +1,6 @@
 # Modelo de dados
 
-Um cluster **Aurora MySQL Serverless v2** (MySQL 8.0, de 0,5 a 4 ACU) com um **database e um usuário por
+Um cluster **Aurora MySQL Serverless v2** (MySQL 8.0, de 0,5 a 2 ACU) com um **database e um usuário por
 serviço**. Nenhum serviço acessa o database de outro. O histórico de notificações fica no **DynamoDB** e
 os arquivos no **S3**.
 
@@ -222,11 +222,11 @@ envios para o mesmo e-mail (sem sobrescrever o último) e garante a idempotênci
 | `email` | S | **Partition key**, normalizado em minúsculas |
 | `message_id` | S | **Sort key**: id do `SendNotification` |
 | `created_at` | S (ISO-8601) | Sort key do LSI `email-created_at-index` |
-| `status` | S | `PENDING`, `SENT`, `FAILED`, `DELIVERED`, `BOUNCED` ou `COMPLAINED` |
+| `status` | S | `PENDING`, `SENT` ou `FAILED` |
 | `template` | S | `VIDEO_FAILED` ou `VIDEO_COMPLETED` |
 | `subject` | S | Assunto enviado |
 | `video_id`, `saga_id`, `correlation_id` | S | Rastreabilidade com a SAGA |
-| `ses_message_id` | S | Id retornado pelo SES |
+| `provider_message_id` | S | Id da mensagem devolvido pelo provedor SMTP (o mesmo do `NotificationSent`) |
 | `attempts` | N | Tentativas de envio |
 | `last_error` | S | Última mensagem de erro |
 | `sent_at`, `updated_at` | S | Timestamps |
@@ -248,5 +248,6 @@ Billing `PAY_PER_REQUEST`, PITR ligado e criptografia padrão. Criada pelo Terra
 | `uploads/{video_id}.{ext}` | Vídeo original | Navegador (POST pré-assinado) | Expira em 7 dias |
 | `results/{video_id}/frames.zip` | Pacote de frames | `video-processor` | Expira em 30 dias |
 
-Block Public Access ligado, SSE-S3, CORS só para `POST` com origem igual ao domínio do CloudFront, e
+Block Public Access ligado, SSE-S3, CORS só para `POST` com origem igual à URL do site (S3 static website,
+[ADR-019](../04-adrs/ADR-019-deploy-na-aws-academy-learner-lab.md)), e
 notificação `s3:ObjectCreated:*` com filtro de prefixo `uploads/` para a fila `video-uploaded`.

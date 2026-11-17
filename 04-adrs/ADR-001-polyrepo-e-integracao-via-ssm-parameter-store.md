@@ -5,6 +5,8 @@
 - **Decisores:** Diego Fenille, Eduardo Santos
 - **Relacionados:** [ADR-002](ADR-002-aws-e-terraform-com-backend-s3-e-lock-nativo.md), [ADR-012](ADR-012-ci-cd-com-github-actions-oidc-e-ordem-de-deploy.md), [ADR-016](ADR-016-terraform-apply-somente-via-github-actions.md)
 
+> **Atualização ([ADR-019](ADR-019-deploy-na-aws-academy-learner-lab.md)):** o `prod` roda na AWS Academy Learner Lab. O `fiapx-infra` não cria mais SES nem OIDC, o front-end é um S3 static website (não CloudFront) e os parâmetros `ses/*` e `web/cloudfront_distribution_id` deixam de existir; entram `apigw/url` e `notification/smtp_*` (catálogo em [parametros-ssm.md](../06-deploy/parametros-ssm.md)). Sem roles por serviço nem OIDC, todos usam a `LabRole` e as credenciais do lab. O polyrepo e a integração pelo SSM continuam valendo.
+
 ## Contexto
 
 O projeto base do FIAP X é um único `main.go` com tudo junto: HTTP, processamento, arquivos e página web. A solução nova tem quatro bounded contexts (Identidade, Gestão de Vídeos, Processamento e Notificação), um front-end, a infraestrutura compartilhada e a documentação. Cada parte usa uma stack diferente (Terraform, Node.js 24, PHP 8.4.27 + Laravel 13, React) e tem um ciclo de deploy diferente (Terraform, Lambda, EKS, S3 + CloudFront).

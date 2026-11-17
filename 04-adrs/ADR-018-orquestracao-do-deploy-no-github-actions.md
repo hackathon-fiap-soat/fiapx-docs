@@ -5,6 +5,8 @@
 - **Decisores:** Diego Fenille, Eduardo Santos
 - **Relacionados:** [ADR-001](ADR-001-polyrepo-e-integracao-via-ssm-parameter-store.md), [ADR-012](ADR-012-ci-cd-com-github-actions-oidc-e-ordem-de-deploy.md), [ADR-016](ADR-016-terraform-apply-somente-via-github-actions.md)
 
+> **Atualização ([ADR-019](ADR-019-deploy-na-aws-academy-learner-lab.md)):** sem OIDC, não há personalização do `sub` nem trust policy por `job_workflow_ref`: o `deploy.yml` de cada repositório, chamado pelo merge ou pelo orquestrador, usa as credenciais do lab dos GitHub Secrets da organização. Antes de cada `deploy-all` ou `destroy-all`, é preciso iniciar a sessão do lab e atualizar os 3 Secrets. O resto deste ADR continua.
+
 ## Contexto
 
 O FIAP X tem 7 repositórios, e a primeira subida exige uma ordem: infraestrutura, notificação, auth,

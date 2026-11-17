@@ -8,15 +8,15 @@ Quatro fluxos: login, upload com processamento, falha com compensação e downlo
 sequenceDiagram
   autonumber
   actor U as Usuário
-  participant CF as CloudFront
   participant GW as API Gateway
   participant REG as Lambda register
   participant LOG as Lambda login
   participant SM as Secrets Manager
   participant DB as Aurora fiapx_auth
 
-  U->>CF: POST /api/auth/register {name, email, password}
-  CF->>GW: repassa /api/*
+  U->>GW: OPTIONS /api/auth/register (preflight CORS, o site está em outra origem)
+  GW-->>U: 204 com Access-Control-Allow-Origin = URL do site (antes do authorizer)
+  U->>GW: POST /api/auth/register {name, email, password}
   GW->>REG: invoca (sem authorizer)
   REG->>REG: valida e-mail e senha (mín. 8), bcrypt custo 12
   REG->>DB: INSERT users (e-mail único)
@@ -91,7 +91,7 @@ sequenceDiagram
   participant QN as SQS notification-commands
   participant N as Lambda notification
   participant DD as DynamoDB notifications
-  participant SES as Amazon SES
+  participant SMTP as Provedor SMTP (Brevo)
   actor U as Usuário
 
   P->>P: ffmpeg falha (arquivo corrompido)
@@ -108,11 +108,11 @@ sequenceDiagram
   R->>QN: SendNotification
   QN->>N: lote (batch size 10)
   N->>DD: PutItem PENDING, condição attribute_not_exists(message_id) OR status = FAILED
-  N->>SES: SendEmail (configuration set)
-  SES-->>N: ses_message_id
+  N->>SMTP: envia por SMTP autenticado (Nodemailer, STARTTLS)
+  SMTP-->>N: provider_message_id
   N->>DD: UpdateItem SENT
   N->>QR: NotificationSent
-  SES-->>U: e-mail "Não conseguimos processar o seu vídeo"
+  SMTP-->>U: e-mail "Não conseguimos processar o seu vídeo"
   QR->>C: NotificationSent
   C->>DB: saga NOTIFIED
 ```
@@ -175,7 +175,7 @@ sequenceDiagram
   participant DB as Aurora fiapx_auth
   participant QN as SQS notification-commands
   participant N as Lambda notification
-  participant SES as Amazon SES
+  participant SMTP as Provedor SMTP (Brevo)
 
   U->>GW: POST /api/auth/password/forgot {email}
   GW->>PW: invoca (sem authorizer, rate limit restrito)
@@ -184,8 +184,8 @@ sequenceDiagram
     PW->>DB: invalida tokens abertos e grava hash SHA-256 do novo token (expira em 30 min)
     PW->>QN: SendNotification PASSWORD_RESET (saga_id nulo, action_url com o token)
     QN->>N: SendNotification
-    N->>SES: SendEmail com o link
-    SES-->>U: e-mail "Redefina sua senha"
+    N->>SMTP: envia o e-mail com o link
+    SMTP-->>U: e-mail "Redefina sua senha"
   end
   PW-->>U: 202 (mesma resposta em qualquer caso)
   U->>GW: POST /api/auth/password/reset/verify {token}

@@ -34,7 +34,7 @@
               "type": "string",
               "minLength": 1,
               "maxLength": 255,
-              "description": "Id retornado pelo provedor (MessageId do SES). Opcional."
+              "description": "Id retornado pelo provedor (Message-ID devolvido pelo servidor SMTP). Opcional."
             }
           },
           "additionalProperties": false

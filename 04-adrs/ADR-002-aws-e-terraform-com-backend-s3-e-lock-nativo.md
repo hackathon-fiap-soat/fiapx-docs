@@ -1,9 +1,11 @@
 # ADR-002 — AWS como cloud e Terraform como IaC, com backend S3 e lock nativo
 
-- **Status:** Aceito
+- **Status:** Aceito, parcialmente substituído por [ADR-019](ADR-019-deploy-na-aws-academy-learner-lab.md)
 - **Data:** 2026-11-16
 - **Decisores:** Diego Fenille, Eduardo Santos
 - **Relacionados:** RFC-001 (escolha da cloud e da IaC), [ADR-001](ADR-001-polyrepo-e-integracao-via-ssm-parameter-store.md), [ADR-012](ADR-012-ci-cd-com-github-actions-oidc-e-ordem-de-deploy.md), [ADR-016](ADR-016-terraform-apply-somente-via-github-actions.md)
+
+> **Atualização ([ADR-019](ADR-019-deploy-na-aws-academy-learner-lab.md)):** não existe mais `fiapx-infra/bootstrap/`. O primeiro passo de todo job Terraform cria, de forma idempotente, o bucket do state `fiapx-tfstate-<account_id>` e o passa no `terraform init -backend-config=bucket=...`; não há roles OIDC. Os módulos `ses` e o CloudFront do `web-hosting` saíram (o `web-hosting` passa a criar um S3 static website). Backend S3 com lock nativo e o resto deste ADR continuam.
 
 ## Contexto
 

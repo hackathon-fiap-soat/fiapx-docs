@@ -85,9 +85,9 @@ flowchart LR
 | Notificação | `Notification` | Um e-mail a ser enviado em resposta a um comando `SendNotification` |
 | Destinatário | `Recipient` | Nome e e-mail de quem recebe. O e-mail é normalizado em minúsculas e é a partition key no DynamoDB |
 | Modelo de mensagem | `Template` | `VIDEO_FAILED` (obrigatório), `VIDEO_COMPLETED` (opcional), `PASSWORD_RESET` e `PASSWORD_CHANGED`, em pt-BR, nas versões HTML e texto |
-| Status da notificação | `NotificationStatus` | `PENDING`, `SENT`, `FAILED`, `DELIVERED`, `BOUNCED` ou `COMPLAINED` |
+| Status da notificação | `NotificationStatus` | `PENDING`, `SENT` ou `FAILED` |
 | Histórico de envios | tabela `notifications` | Todos os e-mails enviados para um destinatário, em ordem cronológica |
-| Remetente | — | `nao-responda@hackfiapf5.click`, com nome de exibição "FIAP X" |
+| Remetente | — | E-mail do time verificado no provedor SMTP (`SMTP_FROM`), com nome de exibição "FIAP X" |
 
 ## Termos transversais
 

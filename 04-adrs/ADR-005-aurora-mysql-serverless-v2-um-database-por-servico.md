@@ -1,9 +1,11 @@
 # ADR-005 — Aurora MySQL Serverless v2 com um database por serviço no mesmo cluster
 
-- **Status:** Aceito
+- **Status:** Aceito, parcialmente substituído por [ADR-019](ADR-019-deploy-na-aws-academy-learner-lab.md)
 - **Data:** 2026-11-16
 - **Decisores:** Diego Fenille, Eduardo Santos
 - **Relacionados:** RFC-007 (banco de dados e cache), [ADR-001](ADR-001-polyrepo-e-integracao-via-ssm-parameter-store.md), [ADR-004](ADR-004-autenticacao-api-gateway-lambda-authorizer-jwt-rs256.md), [ADR-008](ADR-008-saga-orquestrada-com-outbox-e-consumidores-idempotentes.md), [ADR-013](ADR-013-notificacao-sqs-lambda-ses-e-historico-no-dynamodb.md)
+
+> **Atualização ([ADR-019](ADR-019-deploy-na-aws-academy-learner-lab.md)):** no lab, o Aurora Serverless v2 vai de **0,5 a 2 ACU**, numa instância só (sem Multi-AZ, Enhanced Monitoring nem Performance Insights). Se o lab recusar `db.serverless`, a variável `aurora_instance_class = "db.t4g.medium"` troca para instância provisionada. A capacidade é acompanhada no CloudWatch, não no New Relic. Um database por serviço no mesmo cluster continua.
 
 ## Contexto
 
