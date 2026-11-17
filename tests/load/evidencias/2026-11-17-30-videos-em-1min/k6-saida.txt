@@ -1,0 +1,122 @@
+         /\      Grafana   /‾‾/  
+    /\  /  \     |\  __   /  /   
+   /  \/    \    | |/ /  /   ‾‾\ 
+  /          \   |   (  |  (‾)  |
+ / __________ \  |_|\_\  \_____/ 
+     execution: local
+        script: carga.js
+        output: -
+     scenarios: (100.00%) 2 scenarios, 11 max VUs, 13m35s max duration (incl. graceful stop):
+              * envio: 30 iterations shared among 10 VUs (maxDuration: 1m0s, exec: enviar, gracefulStop: 30s)
+              * acompanhamento: 1 iterations for each of 1 VUs (maxDuration: 12m0s, exec: acompanhar, startTime: 1m5s, gracefulStop: 30s)
+time="2026-11-17T15:44:43Z" level=info msg="6 usuários de carga criados; 30 vídeos em 1m" source=console
+acompanhamento • [   0% ] waiting  1m04.4s      
+acompanhamento • [   0% ] waiting  1m03.4s      
+acompanhamento • [   0% ] waiting  1m02.4s      
+acompanhamento • [   0% ] waiting  1m01.4s      
+acompanhamento • [   0% ] waiting  1m00.4s      
+acompanhamento • [   0% ] waiting  0m59.4s      
+acompanhamento • [   0% ] waiting  0m58.4s      
+acompanhamento • [   0% ] waiting  0m57.4s      
+acompanhamento • [   0% ] waiting  0m56.4s      
+acompanhamento • [   0% ] waiting  0m55.4s      
+acompanhamento • [   0% ] waiting  0m54.4s      
+acompanhamento • [   0% ] waiting  0m53.4s      
+acompanhamento • [   0% ] waiting  0m52.4s      
+acompanhamento • [   0% ] waiting  0m51.4s      
+acompanhamento • [   0% ] waiting  0m50.4s      
+acompanhamento • [   0% ] waiting  0m49.4s      
+acompanhamento • [   0% ] waiting  0m48.4s      
+acompanhamento • [   0% ] waiting  0m47.4s      
+acompanhamento • [   0% ] waiting  0m46.4s      
+acompanhamento • [   0% ] waiting  0m45.4s      
+acompanhamento • [   0% ] waiting  0m44.4s      
+acompanhamento • [   0% ] waiting  0m43.4s      
+acompanhamento • [   0% ] waiting  0m42.4s      
+acompanhamento • [   0% ] waiting  0m41.4s      
+acompanhamento • [   0% ] waiting  0m40.4s      
+acompanhamento • [   0% ] waiting  0m39.4s      
+acompanhamento • [   0% ] waiting  0m38.4s      
+acompanhamento • [   0% ] waiting  0m37.4s      
+acompanhamento • [   0% ] waiting  0m36.4s      
+acompanhamento • [   0% ] waiting  0m35.4s      
+acompanhamento • [   0% ] waiting  0m34.4s      
+acompanhamento • [   0% ] waiting  0m33.4s      
+acompanhamento • [   0% ] waiting  0m32.4s      
+acompanhamento • [   0% ] waiting  0m31.4s      
+acompanhamento • [   0% ] waiting  0m30.4s      
+acompanhamento • [   0% ] waiting  0m29.4s      
+acompanhamento • [   0% ] waiting  0m28.4s      
+acompanhamento • [   0% ] waiting  0m27.4s      
+acompanhamento • [   0% ] waiting  0m26.4s      
+acompanhamento • [   0% ] waiting  0m25.4s      
+acompanhamento • [   0% ] waiting  0m24.4s      
+acompanhamento • [   0% ] waiting  0m23.4s      
+acompanhamento • [   0% ] waiting  0m22.4s      
+acompanhamento • [   0% ] waiting  0m21.4s      
+acompanhamento • [   0% ] waiting  0m20.4s      
+acompanhamento • [   0% ] waiting  0m19.4s      
+acompanhamento • [   0% ] waiting  0m18.4s      
+acompanhamento • [   0% ] waiting  0m17.4s      
+acompanhamento • [   0% ] waiting  0m16.4s      
+acompanhamento • [   0% ] waiting  0m15.4s      
+acompanhamento • [   0% ] waiting  0m14.4s      
+acompanhamento • [   0% ] waiting  0m13.4s      
+acompanhamento • [   0% ] waiting  0m12.4s      
+acompanhamento • [   0% ] waiting  0m11.4s      
+acompanhamento • [   0% ] waiting  0m10.4s      
+acompanhamento • [   0% ] waiting  0m09.4s      
+acompanhamento • [   0% ] waiting  0m08.4s      
+acompanhamento • [   0% ] waiting  0m07.4s      
+acompanhamento • [   0% ] waiting  0m06.4s      
+acompanhamento • [   0% ] waiting  0m05.4s      
+envio          ↓ [  67% ] 10 VUs   1m00.0s/1m0s  20/30 shared iters
+acompanhamento • [   0% ] waiting  0m04.4s      
+envio          ✓ [ 100% ] 10 VUs   1m01.1s/1m0s  30/30 shared iters
+acompanhamento • [   0% ] waiting  0m03.4s      
+envio          ✓ [ 100% ] 10 VUs   1m01.1s/1m0s  30/30 shared iters
+acompanhamento • [   0% ] waiting  0m02.4s      
+envio          ✓ [ 100% ] 10 VUs   1m01.1s/1m0s  30/30 shared iters
+acompanhamento • [   0% ] waiting  0m01.4s      
+envio          ✓ [ 100% ] 10 VUs   1m01.1s/1m0s  30/30 shared iters
+acompanhamento • [   0% ] waiting  0m00.4s      
+envio          ✓ [ 100% ] 10 VUs  1m01.1s/1m0s    30/30 shared iters
+envio          ✓ [ 100% ] 10 VUs  1m01.1s/1m0s    30/30 shared iters
+time="2026-11-17T15:45:50Z" level=info msg="status: {\"COMPLETED\":30}" source=console
+  █ THRESHOLDS 
+    checks{etapa:envio}
+    ✓ 'rate==1' rate=100.00%
+    http_req_failed{etapa:envio}
+    ✓ 'rate==0' rate=0.00%
+    videos_concluidos
+    ✓ 'count==30' count=30
+    videos_falhos
+    ✓ 'count==0' count=0
+  █ TOTAL RESULTS 
+    checks_total.......: 90      1.123962/s
+    checks_succeeded...: 100.00% 90 out of 90
+    checks_failed......: 0.00%   0 out of 90
+    ✓ POST /api/videos 201
+    ✓ upload no S3 204
+    ✓ 3 frames por vídeo
+    CUSTOM
+    tempo_ate_completed............: avg=8.26s    min=2s       med=8s       max=14s    p(90)=14s    p(95)=14s   
+    videos_concluidos..............: 30     0.374654/s
+    videos_enviados................: 30     0.374654/s
+    videos_falhos..................: 0      0/s
+    HTTP
+    http_req_duration..............: avg=543.44ms min=218.92ms med=309.78ms max=2.2s   p(90)=1.19s  p(95)=1.34s 
+      { expected_response:true }...: avg=543.44ms min=218.92ms med=309.78ms max=2.2s   p(90)=1.19s  p(95)=1.34s 
+    http_req_failed................: 0.00%  0 out of 78
+      { etapa:envio }..............: 0.00%  0 out of 60
+    http_reqs......................: 78     0.9741/s
+    EXECUTION
+    iteration_duration.............: avg=19.75s   min=1.67s    med=20.09s   max=21.26s p(90)=21.17s p(95)=21.22s
+    iterations.....................: 31     0.387142/s
+    vus............................: 1      min=0       max=10
+    vus_max........................: 11     min=11      max=11
+    NETWORK
+    data_received..................: 376 kB 4.7 kB/s
+    data_sent......................: 639 kB 8.0 kB/s
+envio          ✓ [ 100% ] 10 VUs  1m01.1s/1m0s    30/30 shared iters
+acompanhamento ✓ [ 100% ] 1 VUs   00m01.7s/12m0s  1/1 iters, 1 per VU

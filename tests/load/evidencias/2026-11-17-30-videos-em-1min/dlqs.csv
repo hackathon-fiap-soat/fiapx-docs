@@ -1,0 +1,5 @@
+dlq,mensagens
+fiapx-prod-notification-commands-dlq,0
+fiapx-prod-processing-commands-dlq,0
+fiapx-prod-saga-replies-dlq.fifo,0
+fiapx-prod-video-uploaded-dlq,0
