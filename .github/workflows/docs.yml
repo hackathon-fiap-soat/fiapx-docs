@@ -1,4 +1,4 @@
-name: docs
+name: Docs · lint, contratos, OpenAPI e diagramas
 
 on:
   pull_request:
@@ -10,47 +10,59 @@ permissions:
 
 jobs:
   markdown:
-    name: markdownlint
+    name: Markdown (markdownlint)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - name: Baixar o código
+        uses: actions/checkout@v4
+      - name: Instalar o Node.js 22
+        uses: actions/setup-node@v4
         with:
           node-version: 22
-      - run: npx -y markdownlint-cli2@0.18.1 "**/*.md"
+      - name: Rodar o markdownlint em todos os .md
+        run: npx -y markdownlint-cli2@0.18.1 "**/*.md"
 
   contracts:
-    name: JSON Schemas dos contratos
+    name: Contratos (JSON Schemas e exemplos)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - name: Baixar o código
+        uses: actions/checkout@v4
+      - name: Instalar o Node.js 22
+        uses: actions/setup-node@v4
         with:
           node-version: 22
-      - run: ./scripts/validate-contracts.sh
+      - name: Validar os JSON Schemas e cada exemplo contra o seu schema
+        run: ./scripts/validate-contracts.sh
 
   openapi:
     name: OpenAPI (Spectral)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - name: Baixar o código
+        uses: actions/checkout@v4
+      - name: Instalar o Node.js 22
+        uses: actions/setup-node@v4
         with:
           node-version: 22
-      - run: npx -y @stoplight/spectral-cli@6.15.0 lint api/openapi.yaml --ruleset api/.spectral.yaml --fail-severity=error
+      - name: Validar o api/openapi.yaml (Spectral)
+        run: npx -y @stoplight/spectral-cli@6.15.0 lint api/openapi.yaml --ruleset api/.spectral.yaml --fail-severity=error
 
   mermaid:
-    name: Diagramas Mermaid
+    name: Diagramas (Mermaid e imagens)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - name: Baixar o código
+        uses: actions/checkout@v4
+      - name: Instalar o Node.js 22
+        uses: actions/setup-node@v4
         with:
           node-version: 22
-      - name: Configura o Chromium do Puppeteer sem sandbox (runner do GitHub)
+      - name: Configurar o Chromium do Puppeteer sem sandbox (runner do GitHub)
         run: echo '{"args":["--no-sandbox","--disable-setuid-sandbox"]}' > "$RUNNER_TEMP/puppeteer.json"
-      - run: ./scripts/check-mermaid.sh
+      - name: Renderizar todos os diagramas Mermaid (falha se algum não compila)
+        run: ./scripts/check-mermaid.sh
         env:
           PUPPETEER_CFG: ${{ runner.temp }}/puppeteer.json
-      - name: Todo diagrama tem imagem em diagramas/
+      - name: Conferir se todo diagrama tem imagem em diagramas/
         run: python3 scripts/render-diagrams.py --check
