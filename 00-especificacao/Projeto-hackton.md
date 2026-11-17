@@ -1004,9 +1004,7 @@ Não há apply local na AWS: **todo** `apply` na AWS é feito pelo GitHub Action
 a exceção do bootstrap do ADR-016). Antes de um `deploy-all` ou `destroy-all`, iniciar a sessão do lab e
 atualizar os 3 Secrets.
 
-Bloqueios: o workflow `apply` nunca roda em PR de fork; `prevent_destroy` em Aurora, bucket de vídeos e
-tabela DynamoDB; o `destroy-all.yml` desliga essas proteções por variável explícita. Todo merge na `main`
-de um serviço faz deploy dele; com o ambiente destruído, esse deploy falha ao ler o SSM (decisão do time).
+Bloqueios: o workflow `apply` nunca roda em PR de fork; o Aurora tem `deletion_protection` controlado pela variável `protect`, que o `destroy-all` desliga antes de destruir. Os buckets (vídeos e state) guardam só dados temporários (lifecycle de 7 e 30 dias) e são esvaziados no destroy. Todo merge na `main` de um serviço faz deploy dele; com o ambiente destruído, esse deploy falha ao ler o SSM (decisão do time). Depois de um `apply` com sucesso no `fiapx-infra`, o `deploy-all` roda sozinho a partir da notification.
 
 ---
 
@@ -1014,6 +1012,12 @@ de um serviço faz deploy dele; com o ambiente destruído, esse deploy falha ao 
 
 Cada etapa termina com **Definition of Done (DoD)**. Os pontos marcados com 🛑 exigem **aprovação humana**
 antes de continuar.
+
+**Regra de toda etapa a partir da 5 (ADR-019):** além do DoD local, a etapa só termina com o **deploy testado
+na AWS**: merge (deploy de cada serviço) ou `deploy-all`, smoke verde, verificação do que a etapa entregou
+e `destroy-all` no fim. Infraestrutura nova é conferida antes contra as
+[restrições conhecidas do lab](../06-deploy/ambientes.md#restrições-conhecidas-do-lab). O smoke do
+`deploy-all` cresce a cada etapa.
 
 ### Etapa 0 — Repositórios e padrões
 
@@ -1064,7 +1068,8 @@ antes de continuar.
 - Domain → use cases → adapters (ffmpeg, zip, S3, SQS, heartbeat) → comando consumidor → testes
   (unit + integração com ffmpeg real) → Dockerfile → `k8s/` + `ScaledObject`.
 - **DoD:** fluxo ponta a ponta **local**: upload no LocalStack → saga → processor → `COMPLETED` → download
-  do zip com os frames.
+  do zip com os frames. **Na AWS:** `deploy.yml` do processor (imagem no ECR, KEDA), `deploy-all` com o smoke
+  estendido (upload pelo POST pré-assinado → `COMPLETED` → download do zip) e `destroy-all`.
 
 ### Etapa 6 — fiapx-notification
 
@@ -1073,6 +1078,8 @@ antes de continuar.
 - **DoD:** vídeo inválido no fluxo local gera um e-mail no Mailpit, um item `SENT` no DynamoDB (LocalStack)
   com PK = e-mail do usuário, e a saga termina em `NOTIFIED`. Mensagem duplicada não gera segundo e-mail.
   O e-mail de redefinição pedido ao `fiapx-auth` também chega ao Mailpit (pendência da Etapa 3).
+  **Na AWS:** Lambda por SMTP (Brevo), smoke com um `SendNotification` de teste para um e-mail do time e
+  item `SENT` no DynamoDB; `destroy-all` no fim.
 
 ### Etapa 6.5 — fiapx-web
 
@@ -1080,7 +1087,8 @@ antes de continuar.
   seguindo o `DESIGN.md` e os contratos do `Prompt-layout-web.md`.
 - Integrar aos contratos reais (`/api/auth/*`, `/api/videos*`, POST pré-assinado no S3), testes e build.
 - **DoD:** no ambiente local, cadastro → login → upload de 3 vídeos ao mesmo tempo → status atualizando
-  sozinho → download dos zips.
+  sozinho → download dos zips. **Na AWS:** o mesmo fluxo pela URL do API Gateway (rota `$default` → site no
+  EKS) e `destroy-all` no fim.
 
 ### Etapa 7 — Infra AWS (fiapx-infra) 🛑
 

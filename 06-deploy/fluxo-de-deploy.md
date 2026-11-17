@@ -105,7 +105,7 @@ orquestrador no `fiapx-infra` ([ADR-018](../04-adrs/ADR-018-orquestracao-do-depl
 
 | Workflow | Confirmação | O que faz |
 |---|---|---|
-| `deploy-all.yml` | `deploy-prod` | `apply` da infra e `create-databases.sql`, depois chama o `deploy.yml` de cada repositório na ordem e roda o smoke test ponta a ponta. Input opcional `a_partir_de` para retomar uma subida interrompida |
+| `deploy-all.yml` | `deploy-prod` (só no disparo manual) | `apply` da infra e `create-databases.sql`, depois chama o `deploy.yml` de cada repositório na ordem e roda o smoke test ponta a ponta. Input opcional `a_partir_de` para retomar uma subida interrompida. **Também roda sozinho**, a partir da notification, depois de todo `apply` com sucesso do `terraform.yml` na `main` (merge no `fiapx-infra`) |
 | `destroy-all.yml` | `destroy-prod` | Chama o `destroy.yml` de cada repositório na ordem inversa e destrói a infra por último |
 
 Cada repositório de serviço tem um `deploy.yml` com dois gatilhos, `push` na `main` (merge) e
@@ -115,6 +115,25 @@ usa as mesmas credenciais do lab (Secrets da organização); com a sessão venci
 
 Um merge feito com o ambiente destruído gera um deploy que falha ao ler os parâmetros do SSM, com uma
 mensagem dizendo para rodar o `deploy-all`.
+
+No `deploy-all`, cada etapa só roda se a anterior terminou com sucesso, ou se foi pulada de propósito pelo
+`a_partir_de`. Uma falha para a cadeia ali, e o smoke não roda.
+
+O smoke atual confere `GET /api/health/ready` (banco e SQS), cadastro, login, `GET /api/videos` autenticado
+e 401 sem token. Cada etapa nova acrescenta ao smoke o que ela entrega: upload até `COMPLETED` e download
+(processor), item `SENT` no DynamoDB (notification) e a tela de login (web).
+
+## Teste de deploy ao fim de cada implementação
+
+Regra do time: **toda implementação termina testada na AWS**, não só no ambiente local. Ao concluir uma etapa
+ou mudança relevante:
+
+1. Iniciar a sessão do lab e atualizar os Secrets `AWS_*`.
+2. Antes de mexer em infraestrutura nova, conferir as permissões com o simulador do IAM e as chaves KMS
+   ([restrições conhecidas](ambientes.md#restrições-conhecidas-do-lab)).
+3. Merge dos PRs (o `deploy.yml` de cada serviço roda no merge) ou `deploy-all` manual.
+4. Smoke verde no `deploy-all` e verificação do que a etapa entregou.
+5. `destroy-all` no fim, para não consumir o crédito do lab.
 
 ## Mudanças de contrato
 
