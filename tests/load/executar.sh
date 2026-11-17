@@ -3,7 +3,7 @@
 # profundidade da fila processing-commands, réplicas do video-processor (KEDA), pods e mensagens nas DLQs.
 #
 # Pré-requisitos: credenciais do lab no ambiente (AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY,
-# AWS_SESSION_TOKEN), aws CLI, kubectl e Docker (o k6 roda na imagem oficial; não precisa instalar).
+# AWS_SESSION_TOKEN), aws CLI, kubectl, jq e Docker (o k6 roda na imagem oficial; não precisa instalar).
 # Uso: ./executar.sh            (30 vídeos em 1 minuto)
 #      VIDEOS=60 JANELA=2m ./executar.sh
 set -euo pipefail
@@ -26,7 +26,7 @@ k() { kubectl --kubeconfig "$kube" -n fiapx "$@"; }
 echo "API: $api"
 echo "Evidências em $saida"
 
-# Amostra a cada 15 s (o pollingInterval do KEDA) até o k6 terminar.
+# Amostra a cada 5 s até o k6 terminar (o KEDA consulta a fila a cada 15 s).
 coletar() {
   echo "hora,fila_visiveis,fila_em_processamento,replicas_desejadas,pods_prontos,pods_pendentes" >"$saida/amostras.csv"
   while true; do
@@ -38,7 +38,7 @@ coletar() {
     pendentes=$(k get pods -l app.kubernetes.io/name=video-processor --field-selector=status.phase=Pending \
       --no-headers 2>/dev/null | wc -l | tr -d ' ')
     echo "$(date +%H:%M:%S),$vis,$inv,$desejadas,${prontos:-0},$pendentes" | tee -a "$saida/amostras.csv"
-    sleep 15
+    sleep 5
   done
 }
 coletar &
@@ -51,6 +51,11 @@ docker run --rm -i -v "$PWD:/carga" -w /carga \
 k6_status=${PIPESTATUS[0]}
 
 kill "$coletor" 2>/dev/null || true
+# O resumo traz os tokens JWT dos usuários de carga (setup_data): nunca vão para o repositório.
+jq 'del(.setup_data)' "$saida/resumo-k6.json" >"$saida/resumo.tmp" && mv "$saida/resumo.tmp" "$saida/resumo-k6.json"
+# Só o texto final do k6, sem as linhas de progresso.
+grep -v -E '^(running \(|envio +\[|acompanhamento +\[|Run +\[)|^\s*$' "$saida/k6-saida.txt" >"$saida/k6.tmp" || true
+mv "$saida/k6.tmp" "$saida/k6-saida.txt"
 k get scaledobject,hpa >"$saida/keda.txt" 2>&1 || true
 k get events --field-selector involvedObject.kind=HorizontalPodAutoscaler \
   --sort-by=.lastTimestamp >>"$saida/keda.txt" 2>&1 || true

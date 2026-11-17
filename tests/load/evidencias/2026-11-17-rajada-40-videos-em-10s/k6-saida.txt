@@ -1,0 +1,86 @@
+         /\      Grafana   /‾‾/  
+    /\  /  \     |\  __   /  /   
+   /  \/    \    | |/ /  /   ‾‾\ 
+  /          \   |   (  |  (‾)  |
+ / __________ \  |_|\_\  \_____/ 
+     execution: local
+        script: carga.js
+        output: -
+     scenarios: (100.00%) 2 scenarios, 11 max VUs, 10m45s max duration (incl. graceful stop):
+              * envio: 40 iterations shared among 10 VUs (maxDuration: 10s, exec: enviar, gracefulStop: 30s)
+              * acompanhamento: 1 iterations for each of 1 VUs (maxDuration: 10m0s, exec: acompanhar, startTime: 15s, gracefulStop: 30s)
+time="2026-11-17T15:46:34Z" level=info msg="8 usuários de carga criados; 40 vídeos em 10s" source=console
+acompanhamento • [   0% ] waiting  14.7s     
+acompanhamento • [   0% ] waiting  13.7s     
+acompanhamento • [   0% ] waiting  12.7s     
+acompanhamento • [   0% ] waiting  11.7s     
+acompanhamento • [   0% ] waiting  10.7s     
+acompanhamento • [   0% ] waiting  09.7s     
+acompanhamento • [   0% ] waiting  08.7s     
+acompanhamento • [   0% ] waiting  07.7s     
+acompanhamento • [   0% ] waiting  06.7s     
+acompanhamento • [   0% ] waiting  05.7s     
+envio          ✓ [ 100% ] 10 VUs   09.3s/10s  40/40 shared iters
+acompanhamento • [   0% ] waiting  04.7s     
+envio          ✓ [ 100% ] 10 VUs   09.3s/10s  40/40 shared iters
+acompanhamento • [   0% ] waiting  03.7s     
+envio          ✓ [ 100% ] 10 VUs   09.3s/10s  40/40 shared iters
+acompanhamento • [   0% ] waiting  02.7s     
+envio          ✓ [ 100% ] 10 VUs   09.3s/10s  40/40 shared iters
+acompanhamento • [   0% ] waiting  01.7s     
+envio          ✓ [ 100% ] 10 VUs   09.3s/10s  40/40 shared iters
+acompanhamento • [   0% ] waiting  00.7s     
+envio          ✓ [ 100% ] 10 VUs  09.3s/10s       40/40 shared iters
+envio          ✓ [ 100% ] 10 VUs  09.3s/10s       40/40 shared iters
+envio          ✓ [ 100% ] 10 VUs  09.3s/10s       40/40 shared iters
+time="2026-11-17T15:46:51Z" level=info msg="status: {\"COMPLETED\":38,\"PROCESSING\":1,\"QUEUED\":1}" source=console
+envio          ✓ [ 100% ] 10 VUs  09.3s/10s       40/40 shared iters
+envio          ✓ [ 100% ] 10 VUs  09.3s/10s       40/40 shared iters
+envio          ✓ [ 100% ] 10 VUs  09.3s/10s       40/40 shared iters
+envio          ✓ [ 100% ] 10 VUs  09.3s/10s       40/40 shared iters
+envio          ✓ [ 100% ] 10 VUs  09.3s/10s       40/40 shared iters
+envio          ✓ [ 100% ] 10 VUs  09.3s/10s       40/40 shared iters
+envio          ✓ [ 100% ] 10 VUs  09.3s/10s       40/40 shared iters
+envio          ✓ [ 100% ] 10 VUs  09.3s/10s       40/40 shared iters
+envio          ✓ [ 100% ] 10 VUs  09.3s/10s       40/40 shared iters
+envio          ✓ [ 100% ] 10 VUs  09.3s/10s       40/40 shared iters
+envio          ✓ [ 100% ] 10 VUs  09.3s/10s       40/40 shared iters
+envio          ✓ [ 100% ] 10 VUs  09.3s/10s       40/40 shared iters
+time="2026-11-17T15:47:03Z" level=info msg="status: {\"COMPLETED\":40}" source=console
+  █ THRESHOLDS 
+    checks{etapa:envio}
+    ✓ 'rate==1' rate=100.00%
+    http_req_failed{etapa:envio}
+    ✓ 'rate==0' rate=0.00%
+    videos_concluidos
+    ✓ 'count==40' count=40
+    videos_falhos
+    ✓ 'count==0' count=0
+  █ TOTAL RESULTS 
+    checks_total.......: 120     2.713738/s
+    checks_succeeded...: 100.00% 120 out of 120
+    checks_failed......: 0.00%   0 out of 120
+    ✓ POST /api/videos 201
+    ✓ upload no S3 204
+    ✓ 3 frames por vídeo
+    CUSTOM
+    tempo_ate_completed............: avg=3.92s    min=2s       med=3.5s     max=9s     p(90)=5.4s     p(95)=9s      
+    videos_concluidos..............: 40     0.904579/s
+    videos_enviados................: 40     0.904579/s
+    videos_falhos..................: 0      0/s
+    HTTP
+    http_req_duration..............: avg=386.86ms min=152.91ms med=302.86ms max=1.03s  p(90)=861.28ms p(95)=903.01ms
+      { expected_response:true }...: avg=386.86ms min=152.91ms med=302.86ms max=1.03s  p(90)=861.28ms p(95)=903.01ms
+    http_req_failed................: 0.00%  0 out of 112
+      { etapa:envio }..............: 0.00%  0 out of 80
+    http_reqs......................: 112    2.532822/s
+    EXECUTION
+    iteration_duration.............: avg=2.57s    min=1.92s    med=2.16s    max=14.49s p(90)=2.76s    p(95)=2.94s   
+    iterations.....................: 41     0.927194/s
+    vus............................: 1      min=0        max=10
+    vus_max........................: 11     min=11       max=11
+    NETWORK
+    data_received..................: 345 kB 7.8 kB/s
+    data_sent......................: 843 kB 19 kB/s
+envio          ✓ [ 100% ] 10 VUs  09.3s/10s       40/40 shared iters
+acompanhamento ✓ [ 100% ] 1 VUs   00m14.5s/10m0s  1/1 iters, 1 per VU

@@ -66,3 +66,7 @@ avisado para reenviar.
 Na Etapa 10, um script k6 (`tests/load/`) envia 30 vídeos curtos em 1 minuto. As evidências esperadas
 são a fila crescendo (CloudWatch), o KEDA escalando o worker (New Relic), todos os vídeos em `COMPLETED` e
 nenhuma mensagem nas DLQs.
+
+Resultado em 2026-11-17 na AWS Academy ([evidências](../tests/load/README.md#resultados-2026-11-17-aws-academy)):
+30 vídeos em 1 minuto e uma rajada de 40 vídeos em 10 s, todos `COMPLETED` com 3 frames, nenhuma falha e
+DLQs vazias. Na rajada, o KEDA escalou o `video-processor` de 1 para 5 réplicas.

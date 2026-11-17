@@ -1,0 +1,4 @@
+hora,fila_visiveis,fila_em_processamento,replicas_desejadas,pods_prontos,pods_pendentes
+12:46:23,0,0,5,4,1
+12:46:42,0,0,5,4,1
+12:47:00,0,0,5,4,1

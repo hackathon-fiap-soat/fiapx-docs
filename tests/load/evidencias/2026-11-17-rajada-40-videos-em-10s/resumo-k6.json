@@ -1,0 +1,183 @@
+{
+  "metrics": {
+    "vus_max": {
+      "value": 11,
+      "min": 11,
+      "max": 11
+    },
+    "http_req_connecting": {
+      "avg": 26.15717261607143,
+      "min": 0,
+      "med": 0,
+      "max": 154.026667,
+      "p(90)": 131.79251250000002,
+      "p(95)": 132.86295869999998
+    },
+    "data_received": {
+      "count": 345134,
+      "rate": 7805.027737168938
+    },
+    "http_req_duration": {
+      "max": 1032.199458,
+      "p(90)": 861.2814295000001,
+      "p(95)": 903.0106794999999,
+      "avg": 386.862950339286,
+      "min": 152.910167,
+      "med": 302.8605415
+    },
+    "http_req_blocked": {
+      "avg": 53.66216848214284,
+      "min": 0.00025,
+      "med": 0.001396,
+      "max": 328.8875,
+      "p(90)": 265.9747419,
+      "p(95)": 278.48552309999997
+    },
+    "http_req_failed": {
+      "passes": 0,
+      "fails": 112,
+      "value": 0
+    },
+    "videos_enviados": {
+      "count": 40,
+      "rate": 0.9045794082494264
+    },
+    "checks": {
+      "passes": 120,
+      "fails": 0,
+      "value": 1
+    },
+    "http_reqs": {
+      "count": 112,
+      "rate": 2.532822343098394
+    },
+    "http_req_sending": {
+      "avg": 0.1782767589285714,
+      "min": 0.046458,
+      "med": 0.1586245,
+      "max": 0.60875,
+      "p(90)": 0.30373750000000005,
+      "p(95)": 0.37058969999999986
+    },
+    "data_sent": {
+      "count": 843112,
+      "rate": 19066.54385119976
+    },
+    "http_req_failed{etapa:envio}": {
+      "passes": 0,
+      "fails": 80,
+      "thresholds": {
+        "rate==0": false
+      },
+      "value": 0
+    },
+    "iterations": {
+      "count": 41,
+      "rate": 0.927193893455662
+    },
+    "videos_concluidos": {
+      "count": 40,
+      "rate": 0.9045794082494264,
+      "thresholds": {
+        "count==40": false
+      }
+    },
+    "http_req_waiting": {
+      "p(95)": 902.6117376499999,
+      "avg": 386.593182151786,
+      "min": 152.812875,
+      "med": 302.62833350000005,
+      "max": 1031.89575,
+      "p(90)": 860.8758708
+    },
+    "http_req_receiving": {
+      "max": 0.682667,
+      "p(90)": 0.1869753,
+      "p(95)": 0.2230146999999999,
+      "avg": 0.09149142857142856,
+      "min": 0.013375,
+      "med": 0.06175
+    },
+    "videos_falhos": {
+      "count": 0,
+      "rate": 0,
+      "thresholds": {
+        "count==0": false
+      }
+    },
+    "http_req_duration{expected_response:true}": {
+      "avg": 386.862950339286,
+      "min": 152.910167,
+      "med": 302.8605415,
+      "max": 1032.199458,
+      "p(90)": 861.2814295000001,
+      "p(95)": 903.0106794999999
+    },
+    "iteration_duration": {
+      "med": 2169.650918,
+      "max": 14496.586923,
+      "p(90)": 2769.325667,
+      "p(95)": 2946.659709,
+      "avg": 2576.873041682927,
+      "min": 1921.20921
+    },
+    "checks{etapa:envio}": {
+      "passes": 80,
+      "fails": 0,
+      "thresholds": {
+        "rate==1": false
+      },
+      "value": 1
+    },
+    "http_req_tls_handshaking": {
+      "med": 0,
+      "max": 163.264792,
+      "p(90)": 134.0270247,
+      "p(95)": 139.36166684999998,
+      "avg": 26.894651071428566,
+      "min": 0
+    },
+    "vus": {
+      "value": 1,
+      "min": 0,
+      "max": 10
+    },
+    "tempo_ate_completed": {
+      "min": 2000,
+      "med": 3500,
+      "max": 9000,
+      "p(90)": 5400.000000000004,
+      "p(95)": 9000,
+      "avg": 3925
+    }
+  },
+  "root_group": {
+    "groups": {},
+    "checks": {
+      "POST /api/videos 201": {
+        "name": "POST /api/videos 201",
+        "path": "::POST /api/videos 201",
+        "id": "8b7278f59b45706aedcfb9127eae3199",
+        "passes": 40,
+        "fails": 0
+      },
+      "upload no S3 204": {
+        "name": "upload no S3 204",
+        "path": "::upload no S3 204",
+        "id": "cb02e69cacaf39ab5bc5ab88a9ecd283",
+        "passes": 40,
+        "fails": 0
+      },
+      "3 frames por vídeo": {
+        "name": "3 frames por vídeo",
+        "path": "::3 frames por vídeo",
+        "id": "84f76f827ca8c3a5a0203c97a4f4053a",
+        "passes": 40,
+        "fails": 0
+      }
+    },
+    "name": "",
+    "path": "",
+    "id": "d41d8cd98f00b204e9800998ecf8427e"
+  }
+}

@@ -21,7 +21,7 @@ O teste falha (código de saída diferente de zero) se algum envio der erro, se 
   /api/videos` e o POST pré-assinado do S3 com o [`video-3s.mp4`](video-3s.mp4) (3 frames a 1 fps). O cenário
   `acompanhamento` consulta `GET /api/videos` de cada usuário a cada 10 s até todos ficarem em status final.
 - [`executar.sh`](executar.sh): lê a URL da API, a fila e o cluster do SSM, roda o k6 pela imagem oficial
-  (`grafana/k6:1.3.0`, sem instalar nada) e, a cada 15 s, registra a fila, as réplicas e os pods pendentes.
+  (`grafana/k6:1.3.0`, sem instalar nada) e, a cada 5 s, registra a fila, as réplicas e os pods pendentes.
   No fim, guarda o `ScaledObject`, o HPA, os eventos de escala e a contagem das DLQs.
 
 ## Como rodar
@@ -34,7 +34,7 @@ cd tests/load
 VIDEOS=60 JANELA=2m ./executar.sh   # outra carga
 ```
 
-Requer Docker, `aws` CLI e `kubectl`. As evidências ficam em `evidencias/<data-hora>/`: `k6-saida.txt`,
+Requer Docker, `aws` CLI, `kubectl` e `jq`. As evidências ficam em `evidencias/<data-hora>/`: `k6-saida.txt`,
 `resumo-k6.json`, `amostras.csv`, `keda.txt` e `dlqs.csv`. Para os prints da entrega, use também o gráfico
 da fila no CloudWatch (`ApproximateNumberOfMessagesVisible` da `processing-commands`).
 
@@ -47,3 +47,17 @@ da fila no CloudWatch (`ApproximateNumberOfMessagesVisible` da `processing-comma
 | `FRAMES_ESPERADOS` | `3` | frames por vídeo |
 
 Os usuários de carga ficam no banco até o próximo `destroy-all`.
+
+## Resultados (2026-11-17, AWS Academy)
+
+| Rodada | Vídeos | Concluídos | Falhas | Tempo até `COMPLETED` (média / máx.) | Réplicas do processor | DLQs |
+|---|---|---|---|---|---|---|
+| [30 vídeos em 1 minuto](evidencias/2026-11-17-30-videos-em-1min/) | 30 | 30, todos com 3 frames | 0 | 8,3 s / 14 s | 1 (a fila nunca passou de 2 mensagens) | vazias |
+| [Rajada: 40 vídeos em 10 s](evidencias/2026-11-17-rajada-40-videos-em-10s/) | 40 | 40, todos com 3 frames | 0 | 3,9 s / 9 s | 1 → 4 → 5 pelo KEDA | vazias |
+
+- **30 vídeos em 1 minuto:** com vídeos de 3 s, um pod processa mais rápido do que os envios chegam; a fila
+  absorve os picos (até 2 mensagens) e nada se perde. O KEDA não precisou escalar.
+- **Rajada:** a fila encheu e o KEDA escalou o `video-processor` para 4 e depois 5 réplicas (eventos
+  `SuccessfulRescale` em `keda.txt`). Uma réplica ficou `Pending` por falta de espaço nos nós do lab: o
+  limite prático do cluster da AWS Academy, não do KEDA (máximo de 10).
+- Nas duas rodadas, nenhuma requisição com erro (`http_req_failed` 0%) e nenhuma mensagem nas quatro DLQs.

@@ -1,0 +1,13 @@
+NAME                                           SCALETARGETKIND      SCALETARGETNAME           MIN   MAX   READY   ACTIVE   FALLBACK   PAUSED   TRIGGERS        AUTHENTICATIONS       AGE
+scaledobject.keda.sh/video-api-saga-consumer   apps/v1.Deployment   video-api-saga-consumer   1     5     True    False    False      False    aws-sqs-queue   video-api-aws         166m
+scaledobject.keda.sh/video-processor           apps/v1.Deployment   video-processor           1     10    True    False    False      False    aws-sqs-queue   video-processor-aws   173m
+
+NAME                                                                   REFERENCE                            TARGETS                  MINPODS   MAXPODS   REPLICAS   AGE
+horizontalpodautoscaler.autoscaling/keda-hpa-video-api-saga-consumer   Deployment/video-api-saga-consumer   0/10 (avg), 0/10 (avg)   1         5         1          166m
+horizontalpodautoscaler.autoscaling/keda-hpa-video-processor           Deployment/video-processor           0/1 (avg)                1         10        5          173m
+horizontalpodautoscaler.autoscaling/video-api-outbox-relay             Deployment/video-api-outbox-relay    cpu: 30%/70%             1         2         1          166m
+horizontalpodautoscaler.autoscaling/video-api-web                      Deployment/video-api-web             cpu: 16%/70%             2         6         2          166m
+./executar.sh: line 24: 50145 Terminated: 15          coletar
+LAST SEEN   TYPE     REASON              OBJECT                                             MESSAGE
+75s         Normal   SuccessfulRescale   horizontalpodautoscaler/keda-hpa-video-processor   New size: 4; reason: external metric s0-aws-sqs-fiapx-prod-processing-commands(&LabelSelector{MatchLabels:map[string]string{scaledobject.keda.sh/name: video-processor,},MatchExpressions:[]LabelSelectorRequirement{},}) above target
+60s         Normal   SuccessfulRescale   horizontalpodautoscaler/keda-hpa-video-processor   New size: 5; reason: All metrics below target

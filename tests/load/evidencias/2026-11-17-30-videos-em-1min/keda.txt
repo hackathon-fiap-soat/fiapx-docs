@@ -1,0 +1,12 @@
+NAME                                           SCALETARGETKIND      SCALETARGETNAME           MIN   MAX   READY   ACTIVE   FALLBACK   PAUSED   TRIGGERS        AUTHENTICATIONS       AGE
+scaledobject.keda.sh/video-api-saga-consumer   apps/v1.Deployment   video-api-saga-consumer   1     5     True    False    False      False    aws-sqs-queue   video-api-aws         165m
+scaledobject.keda.sh/video-processor           apps/v1.Deployment   video-processor           1     10    True    False    False      False    aws-sqs-queue   video-processor-aws   172m
+
+NAME                                                                   REFERENCE                            TARGETS                  MINPODS   MAXPODS   REPLICAS   AGE
+horizontalpodautoscaler.autoscaling/keda-hpa-video-api-saga-consumer   Deployment/video-api-saga-consumer   0/10 (avg), 0/10 (avg)   1         5         1          165m
+horizontalpodautoscaler.autoscaling/keda-hpa-video-processor           Deployment/video-processor           5/1 (avg)                1         10        1          172m
+horizontalpodautoscaler.autoscaling/video-api-outbox-relay             Deployment/video-api-outbox-relay    cpu: 10%/70%             1         2         1          165m
+horizontalpodautoscaler.autoscaling/video-api-web                      Deployment/video-api-web             cpu: 7%/70%              2         6         2          165m
+./executar.sh: line 24: 49726 Terminated: 15          coletar
+LAST SEEN   TYPE     REASON              OBJECT                                             MESSAGE
+1s          Normal   SuccessfulRescale   horizontalpodautoscaler/keda-hpa-video-processor   New size: 4; reason: external metric s0-aws-sqs-fiapx-prod-processing-commands(&LabelSelector{MatchLabels:map[string]string{scaledobject.keda.sh/name: video-processor,},MatchExpressions:[]LabelSelectorRequirement{},}) above target

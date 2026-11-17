@@ -1,0 +1,183 @@
+{
+  "root_group": {
+    "path": "",
+    "id": "d41d8cd98f00b204e9800998ecf8427e",
+    "groups": {},
+    "checks": {
+      "POST /api/videos 201": {
+        "name": "POST /api/videos 201",
+        "path": "::POST /api/videos 201",
+        "id": "8b7278f59b45706aedcfb9127eae3199",
+        "passes": 30,
+        "fails": 0
+      },
+      "upload no S3 204": {
+        "passes": 30,
+        "fails": 0,
+        "name": "upload no S3 204",
+        "path": "::upload no S3 204",
+        "id": "cb02e69cacaf39ab5bc5ab88a9ecd283"
+      },
+      "3 frames por vídeo": {
+        "id": "84f76f827ca8c3a5a0203c97a4f4053a",
+        "passes": 30,
+        "fails": 0,
+        "name": "3 frames por vídeo",
+        "path": "::3 frames por vídeo"
+      }
+    },
+    "name": ""
+  },
+  "metrics": {
+    "data_sent": {
+      "count": 639122,
+      "rate": 7981.654100873677
+    },
+    "data_received": {
+      "count": 376054,
+      "rate": 4696.33802505617
+    },
+    "videos_concluidos": {
+      "count": 30,
+      "rate": 0.37465401445453345,
+      "thresholds": {
+        "count==30": false
+      }
+    },
+    "videos_falhos": {
+      "count": 0,
+      "rate": 0,
+      "thresholds": {
+        "count==0": false
+      }
+    },
+    "vus_max": {
+      "value": 11,
+      "min": 11,
+      "max": 11
+    },
+    "iteration_duration": {
+      "min": 1674.789751,
+      "med": 20098.682092,
+      "max": 21262.227302,
+      "p(90)": 21171.148635,
+      "p(95)": 21226.204802,
+      "avg": 19750.77707790323
+    },
+    "http_req_blocked": {
+      "p(90)": 321.7671000000001,
+      "p(95)": 359.33977500000003,
+      "avg": 158.1315321025641,
+      "min": 0.00025,
+      "med": 258.4788955,
+      "max": 417.609708
+    },
+    "http_req_failed{etapa:envio}": {
+      "passes": 0,
+      "fails": 60,
+      "thresholds": {
+        "rate==0": false
+      },
+      "value": 0
+    },
+    "http_req_tls_handshaking": {
+      "p(90)": 138.8155411,
+      "p(95)": 150.27316875,
+      "avg": 73.33605024358974,
+      "min": 0,
+      "med": 129.4389585,
+      "max": 151.856042
+    },
+    "checks": {
+      "passes": 90,
+      "fails": 0,
+      "value": 1
+    },
+    "http_reqs": {
+      "count": 78,
+      "rate": 0.9741004375817869
+    },
+    "videos_enviados": {
+      "count": 30,
+      "rate": 0.37465401445453345
+    },
+    "tempo_ate_completed": {
+      "max": 14000,
+      "p(90)": 14000,
+      "p(95)": 14000,
+      "avg": 8266.666666666666,
+      "min": 2000,
+      "med": 8000
+    },
+    "checks{etapa:envio}": {
+      "passes": 60,
+      "fails": 0,
+      "thresholds": {
+        "rate==1": false
+      },
+      "value": 1
+    },
+    "http_req_failed": {
+      "fails": 78,
+      "passes": 0,
+      "value": 0
+    },
+    "http_req_duration{expected_response:true}": {
+      "max": 2203.604084,
+      "p(90)": 1194.4559878,
+      "p(95)": 1347.2089071999999,
+      "avg": 543.4430940512822,
+      "min": 218.928834,
+      "med": 309.784104
+    },
+    "http_req_connecting": {
+      "p(95)": 223.47701075,
+      "avg": 81.87687937179487,
+      "min": 0,
+      "med": 127.38760450000001,
+      "max": 226.427792,
+      "p(90)": 166.40953760000002
+    },
+    "http_req_sending": {
+      "max": 1.956875,
+      "p(90)": 0.7310500000000001,
+      "p(95)": 0.80932145,
+      "avg": 0.335793846153846,
+      "min": 0.061791,
+      "med": 0.242375
+    },
+    "vus": {
+      "max": 10,
+      "value": 1,
+      "min": 0
+    },
+    "http_req_duration": {
+      "min": 218.928834,
+      "med": 309.784104,
+      "max": 2203.604084,
+      "p(90)": 1194.4559878,
+      "p(95)": 1347.2089071999999,
+      "avg": 543.4430940512822
+    },
+    "iterations": {
+      "count": 31,
+      "rate": 0.3871424816030179
+    },
+    "http_req_waiting": {
+      "avg": 542.7459049358972,
+      "min": 218.594,
+      "med": 308.63325,
+      "max": 2202.373043,
+      "p(90)": 1193.9850466,
+      "p(95)": 1346.8555615999999
+    },
+    "http_req_receiving": {
+      "avg": 0.3613952692307692,
+      "min": 0.024375,
+      "med": 0.114292,
+      "max": 3.915,
+      "p(90)": 0.563724900000001,
+      "p(95)": 2.280757999999999
+    }
+  }
+}
