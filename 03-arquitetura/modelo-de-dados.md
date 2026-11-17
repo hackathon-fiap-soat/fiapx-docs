@@ -223,7 +223,7 @@ envios para o mesmo e-mail (sem sobrescrever o último) e garante a idempotênci
 | `message_id` | S | **Sort key**: id do `SendNotification` |
 | `created_at` | S (ISO-8601) | Sort key do LSI `email-created_at-index` |
 | `status` | S | `PENDING`, `SENT` ou `FAILED` |
-| `template` | S | `VIDEO_FAILED` ou `VIDEO_COMPLETED` |
+| `template` | S | `VIDEO_FAILED` · `VIDEO_COMPLETED` · `PASSWORD_RESET` · `PASSWORD_CHANGED` |
 | `subject` | S | Assunto enviado |
 | `video_id`, `saga_id`, `correlation_id` | S | Rastreabilidade com a SAGA |
 | `provider_message_id` | S | Id da mensagem devolvido pelo provedor SMTP (o mesmo do `NotificationSent`) |

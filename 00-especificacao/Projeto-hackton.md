@@ -726,7 +726,7 @@ envios** de um mesmo e-mail (e não sobrescrever o último), a tabela tem uma so
 | `message_id` | S | **Sort key**: id do `SendNotification`. Garante a idempotência com `attribute_not_exists` |
 | `created_at` | S (ISO-8601) | Sort key do **LSI `email-created_at-index`**: histórico em ordem cronológica por e-mail |
 | `status` | S | `PENDING` · `SENT` · `FAILED` |
-| `template` | S | `VIDEO_FAILED` · `VIDEO_COMPLETED` |
+| `template` | S | `VIDEO_FAILED` · `VIDEO_COMPLETED` · `PASSWORD_RESET` · `PASSWORD_CHANGED` |
 | `subject` | S | assunto enviado |
 | `video_id`, `saga_id`, `correlation_id` | S | rastreabilidade com a SAGA |
 | `provider_message_id` | S | id da mensagem devolvido pelo provedor SMTP |
@@ -743,9 +743,19 @@ criptografia padrão.
 
 - Event source mapping com `batch_size = 10`, `function_response_types = ["ReportBatchItemFailures"]`,
   `maxReceiveCount = 3` na fila e DLQ `notification-commands-dlq` com alarme.
-- Condição do `PutItem`: `attribute_not_exists(message_id) OR #status = :failed` (só reenvia o que falhou).
-- Validar o payload contra o JSON Schema `SendNotification` (`fiapx-docs/contracts`). Payload inválido é
-  registrado como `FAILED` e não é reenviado.
+- Condição do `PutItem`: `attribute_not_exists(message_id) OR #status = :failed OR (#status = :pending AND
+  updated_at < agora - 60 s)`. Reenvia o que falhou e retoma um envio cuja Lambda morreu entre a reserva e o
+  envio; um `PENDING` recente devolve a mensagem para a fila.
+- `attempts` é o `ApproximateReceiveCount` da mensagem; a 3ª tentativa (`MAX_ATTEMPTS`) responde
+  `NotificationFailed` e deixa a mensagem ir para a DLQ. `created_at` é o `occurred_at` do comando (não muda
+  entre tentativas).
+- O `message_id` das respostas (`NotificationSent`/`NotificationFailed`) é um UUID v7 **determinístico**,
+  derivado do `message_id` do comando e do tipo da resposta: uma resposta repetida tem o mesmo id, e a FIFO e
+  o deduplicador do video-api a descartam.
+- Validar o payload contra o JSON Schema `SendNotification` (`fiapx-docs/contracts`), ignorando campos a
+  mais (`additionalProperties`). Payload inválido é registrado como `FAILED` (se tiver e-mail e
+  `message_id` válidos) e não é reenviado; com `saga_id`, a SAGA recebe `NotificationFailed`. A Lambda usa
+  uma cópia dos schemas, e um contract test garante que ela é igual à do `fiapx-docs`.
 - Templates em pt-BR, com nome do vídeo, motivo da falha legível (`FFMPEG_ERROR` → "O arquivo de vídeo
   está corrompido ou em um formato que não conseguimos ler") e link para o front-end (`/web/url`).
 - Um só adaptador SMTP: local envia para o **Mailpit**; na AWS, para o provedor externo (Brevo) (§8.6.4).
