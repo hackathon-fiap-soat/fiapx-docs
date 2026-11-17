@@ -663,9 +663,11 @@ app/
 - Diretório de trabalho `/work` em `emptyDir` com `sizeLimit` (ex.: 10Gi). Limpar sempre no `finally`.
 - **Graceful shutdown:** tratar `SIGTERM` (`pcntl`), terminar o vídeo atual e não pegar novas mensagens;
   `terminationGracePeriodSeconds` maior que o tempo máximo de processamento esperado.
-- Falha **definitiva** (vídeo corrompido, sem frames): responde `VideoProcessingFailed` na hora e apaga a
-  mensagem. Falha **transitória** (S3 ou rede): não apaga, a mensagem volta para a fila e, depois de 3
-  tentativas, vai para a DLQ. Nesse caso o timeout da saga cobre a compensação.
+- Falha **definitiva** (vídeo corrompido, sem frames, timeout do ffmpeg, vídeo inexistente): responde
+  `VideoProcessingFailed` na hora e apaga a mensagem. Falha **transitória** (S3 ou rede): não apaga, e a
+  mensagem volta para a fila. Na última tentativa (3ª, igual ao `maxReceiveCount`), responde
+  `VideoProcessingFailed` (`DOWNLOAD_ERROR`/`UPLOAD_ERROR`) e apaga, para a saga compensar sem esperar o
+  timeout (que continua cobrindo o worker que morre sem responder).
 - KEDA `ScaledObject` (`aws-sqs-queue`, `queueLength: 1`, `minReplicaCount: 1`, `maxReplicaCount: 10`,
   `identityOwner: keda`: o operador usa a `LabRole` dos nós, ADR-019).
 - Sem banco próprio (stateless). Idempotência pela chave determinística `results/{video_id}/frames.zip`.
