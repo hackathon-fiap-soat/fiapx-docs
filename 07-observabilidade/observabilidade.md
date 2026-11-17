@@ -309,7 +309,7 @@ CloudWatch (*Metrics* e *Alarms*), sem custo extra:
 | Namespace | Métricas usadas | Para quê |
 |---|---|---|
 | `AWS/SQS` | `ApproximateNumberOfMessagesVisible`, `ApproximateAgeOfOldestMessage`, `NumberOfMessagesSent` | Profundidade das filas e das DLQs; evidência da fila crescendo no teste de carga |
-| `AWS/RDS` | `ServerlessDatabaseCapacity`, `DatabaseConnections`, `CPUUtilization` | Capacidade do Aurora (ACU) |
+| `AWS/RDS` | `CPUUtilization`, `FreeableMemory`, `DatabaseConnections` | Uso da instância do Aurora (`db.t3.medium`) |
 | `AWS/ApiGateway` | `Count`, `4xx`, `5xx`, `Latency`, `IntegrationLatency` | Latência e erros do gateway |
 | `AWS/S3` | `BucketSizeBytes`, `NumberOfObjects` (diárias) | Volume de vídeos e zips |
 

@@ -8,13 +8,12 @@ flowchart LR
     U["Navegador"]
   end
   subgraph Borda["Borda AWS"]
-    WEB[("S3 static website<br/>HTTP, só GetObject público")]
-    GW["API Gateway HTTPS<br/>CORS + rate limit + authorizer"]
+    GW["API Gateway HTTPS<br/>site e /api/*, rate limit + authorizer"]
   end
   subgraph VPC["VPC 2 AZs"]
     subgraph Privada["Subnets privadas"]
       ALB["ALB interno"]
-      EKS["EKS<br/>video-api, processor"]
+      EKS["EKS<br/>video-api, processor, site"]
       LBD["Lambdas<br/>auth, notification"]
       AUR[("Aurora MySQL")]
     end
@@ -24,8 +23,7 @@ flowchart LR
   end
   S3[("S3 vídeos<br/>privado")]
 
-  U -- "HTTP" --> WEB
-  U -- "HTTPS, CORS" --> GW
+  U -- "HTTPS" --> GW
   GW -- "VPC Link" --> ALB --> EKS
   GW --> LBD
   EKS & LBD --> AUR
@@ -106,9 +104,9 @@ como referência e são o caminho para sair do lab:
 |---|---|
 | Vídeos e zips | Bucket privado, Block Public Access, SSE-S3, acesso só por URL pré-assinada de curta duração (upload 1 h, download 15 min) |
 | Upload | POST pré-assinado com `content-length-range` (até 500 MB) e `Content-Type` fixado na política |
-| CORS do bucket | Só `POST`, só a origem do site (URL do S3 static website) |
-| Site (front-end) | Bucket próprio com website hosting e leitura pública só de objetos (`s3:GetObject`); sem listagem nem escrita pública. Servido em HTTP (sem TLS), risco aceito para a demonstração acadêmica |
-| CORS da API | HTTP API com origem igual à URL do site, métodos `GET, POST, PUT, DELETE, OPTIONS` e headers `Authorization, Content-Type, X-Correlation-Id` |
+| CORS do bucket | Só `POST`, só a origem do site (a URL do API Gateway) |
+| Site (front-end) | Pod nginx (`nginxinc/nginx-unprivileged`, sem root) no EKS, alcançável só pelo ALB interno via VPC Link; o usuário acessa pela URL HTTPS do API Gateway (rota `$default`, sem authorizer). Não há bucket público |
+| API sem CORS | Site e API na mesma origem (a URL do API Gateway): o HTTP API não tem configuração de CORS |
 | Banco | Aurora com criptografia em repouso, TLS, usuário por serviço com privilégio mínimo, senhas no Secrets Manager |
 | DynamoDB | Criptografia padrão, PITR, TTL de 90 dias para dados pessoais (e-mail) |
 | Logs | JSON sem senha, token ou URL pré-assinada; e-mail só nos campos necessários para rastreabilidade |
@@ -140,7 +138,7 @@ como referência e são o caminho para sair do lab:
 | Enumeração de e-mails pela recuperação de senha | Resposta 202 idêntica para qualquer e-mail |
 | Link de redefinição vazado | Validade de 30 min, uso único, token fora da URL da API e fora dos logs |
 | Token roubado | Validade curta (1 h), token só trafega para a API (HTTPS), em memória e `sessionStorage` (não em `localStorage`) |
-| Site adulterado no caminho (HTTP sem TLS) | Risco aceito na demonstração (ADR-019); o plano B do ADR-019 serve o site pelo API Gateway, em HTTPS |
+| Site adulterado no caminho | O site é servido em HTTPS pela URL do API Gateway (rota `$default` → ALB interno → pod nginx, ADR-019) |
 | Componente comprometido usando a `LabRole` | Risco aceito no lab (ver [LabRole](#como-está-no-lab-labrole)); ambiente efêmero, sem dados reais |
 | Credencial do lab vazada no CI | Só em GitHub Secrets (mascarados), validade de ~4 h |
 | Acesso a vídeo de outro usuário | Filtro por `user_id` em toda consulta; URLs pré-assinadas por objeto |

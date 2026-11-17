@@ -46,15 +46,17 @@ Terraform local: `tflocal` com state em `.terraform-local/` (no `.gitignore`).
 
 O `prod` roda numa conta da AWS Academy Learner Lab, com as restrições e escolhas do
 [ADR-019](../04-adrs/ADR-019-deploy-na-aws-academy-learner-lab.md): sem roles próprias (tudo usa a
-`LabRole`), sem SES nem CloudFront, sem spot e com credenciais temporárias.
+`LabRole`), sem SES nem CloudFront, sem spot, sem `db.serverless`, sem bucket público (Block Public Access da
+conta) e com credenciais temporárias.
 
 | Recurso | Configuração |
 |---|---|
 | Região | `us-east-1` |
 | Rede | VPC em 2 AZs, 1 NAT Gateway |
 | EKS | 1 managed node group **on-demand** `t3.large` (2 vCPU, 8 GiB), mínimo 2 e máximo 4 nós (8 vCPUs no teto, abaixo do limite do lab de 32 vCPUs e 9 instâncias); cluster e nós com a `LabRole`; launch template com `http_put_response_hop_limit = 2` para os pods usarem a `LabRole` pelo IMDS. Add-ons: AWS Load Balancer Controller, metrics-server, KEDA (`identityOwner: keda`), New Relic `nri-bundle` |
-| Aurora | MySQL 8.0 Serverless v2, de 0,5 a 2 ACU, uma instância (sem Multi-AZ, Enhanced Monitoring nem Performance Insights). Se o lab recusar `db.serverless`, `aurora_instance_class = "db.t4g.medium"` |
-| Front-end | Bucket `fiapx-prod-web-<account_id>` com S3 static website (HTTP), `index.html` como documento de erro |
+| Aurora | MySQL 8.0 provisionado `db.t3.medium`, uma instância (sem Multi-AZ, Enhanced Monitoring nem Performance Insights); o lab nega `db.serverless`. A classe é a variável `aurora_instance_class` |
+| Front-end | Pod nginx (`nginxinc/nginx-unprivileged`) com o build do Vite, imagem no ECR `fiapx-web`, no target group `fiapx-prod-web` do ALB interno (padrão do listener). Acesso pela URL HTTPS do API Gateway (rota `$default`), na mesma origem da API |
+| Buckets S3 | A SCP do lab nega `s3:GetBucketObjectLockConfiguration`; os buckets são criados e apagados pelo AWS CLI dentro do Terraform (módulo `s3-bucket`) e as configurações seguem em recursos `aws_s3_bucket_*` |
 | E-mail | SMTP externo (Brevo, `smtp-relay.brevo.com:587`, STARTTLS) |
 | State do Terraform | Bucket `fiapx-tfstate-<account_id>`, criado pelo próprio workflow, lock nativo do S3 |
 | Prefixo dos recursos | `fiapx-prod-*` |
@@ -90,7 +92,7 @@ Com tudo ligado, o custo estimado é de **~US$ 10/dia**, abatido do crédito do 
 |---|---|
 | EKS (control plane) | ~US$ 2,40 |
 | Nós do EKS (2× `t3.large` on-demand) | ~US$ 4,00 |
-| Aurora Serverless v2 (0,5 ACU mínimo) | ~US$ 1,50 |
+| Aurora `db.t3.medium` (uma instância) | ~US$ 2,00 |
 | NAT Gateway | ~US$ 1,10 + tráfego |
 | ALB interno | ~US$ 0,55 |
 | SQS, S3, Lambda, DynamoDB, API Gateway, CloudWatch | centavos no volume do hackathon |

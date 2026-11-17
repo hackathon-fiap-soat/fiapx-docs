@@ -72,12 +72,12 @@ A documentação vem antes do código: os outros repositórios implementam o que
 | Repositório | Responsabilidade |
 |---|---|
 | [`fiapx-docs`](https://github.com/hackathon-fiap-soat/fiapx-docs) | Esta documentação |
-| [`fiapx-infra`](https://github.com/hackathon-fiap-soat/fiapx-infra) | VPC, EKS (add-ons), Aurora MySQL, S3 (vídeos e site), SQS/DLQ, ECR, API Gateway + VPC Link + ALB interno, Secrets, outputs no SSM, orquestrador de deploy e ambiente local (docker-compose + LocalStack). Roda na AWS Academy Learner Lab, com a `LabRole` ([ADR-019](04-adrs/ADR-019-deploy-na-aws-academy-learner-lab.md)) |
+| [`fiapx-infra`](https://github.com/hackathon-fiap-soat/fiapx-infra) | VPC, EKS (add-ons), Aurora MySQL (`db.t3.medium`), S3 (vídeos), SQS/DLQ, ECR, API Gateway + VPC Link + ALB interno, Secrets, outputs no SSM, orquestrador de deploy e ambiente local (docker-compose + LocalStack). Roda na AWS Academy Learner Lab, com a `LabRole` ([ADR-019](04-adrs/ADR-019-deploy-na-aws-academy-learner-lab.md)) |
 | [`fiapx-auth`](https://github.com/hackathon-fiap-soat/fiapx-auth) | Lambdas de register, login e authorizer (JWT RS256) e rotas `/api/auth/*` no API Gateway |
 | [`fiapx-video-api`](https://github.com/hackathon-fiap-soat/fiapx-video-api) | Gestão de vídeos, POST pré-assinado no S3, listagem de status, download e orquestração da SAGA (outbox e consumidores idempotentes) |
 | [`fiapx-video-processor`](https://github.com/hackathon-fiap-soat/fiapx-video-processor) | Consome `ProcessVideo`/`CleanupArtifacts`, extrai 1 frame por segundo com ffmpeg, gera o zip no S3 e responde à SAGA. Escalado por KEDA |
 | [`fiapx-notification`](https://github.com/hackathon-fiap-soat/fiapx-notification) | Fila SQS → Lambda que envia e-mail por SMTP (Brevo; Mailpit no local), registra cada envio no DynamoDB (chave = e-mail) e responde à SAGA |
-| [`fiapx-web`](https://github.com/hackathon-fiap-soat/fiapx-web) | Cadastro, login, upload de vários vídeos, lista de status e download do zip. Servido por S3 static website, chamando o API Gateway com CORS |
+| [`fiapx-web`](https://github.com/hackathon-fiap-soat/fiapx-web) | Cadastro, login, upload de vários vídeos, lista de status e download do zip. Servido por um pod nginx no EKS, na mesma origem da API: a URL do API Gateway (rota `$default` → ALB → site), sem CORS na API |
 
 ## Stack
 

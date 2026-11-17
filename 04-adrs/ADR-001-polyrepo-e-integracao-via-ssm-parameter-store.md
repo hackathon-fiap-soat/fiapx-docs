@@ -5,7 +5,7 @@
 - **Decisores:** Diego Fenille, Eduardo Santos
 - **Relacionados:** [ADR-002](ADR-002-aws-e-terraform-com-backend-s3-e-lock-nativo.md), [ADR-012](ADR-012-ci-cd-com-github-actions-oidc-e-ordem-de-deploy.md), [ADR-016](ADR-016-terraform-apply-somente-via-github-actions.md)
 
-> **Atualização ([ADR-019](ADR-019-deploy-na-aws-academy-learner-lab.md)):** o `prod` roda na AWS Academy Learner Lab. O `fiapx-infra` não cria mais SES nem OIDC, o front-end é um S3 static website (não CloudFront) e os parâmetros `ses/*` e `web/cloudfront_distribution_id` deixam de existir; entram `apigw/url` e `notification/smtp_*` (catálogo em [parametros-ssm.md](../06-deploy/parametros-ssm.md)). Sem roles por serviço nem OIDC, todos usam a `LabRole` e as credenciais do lab. O polyrepo e a integração pelo SSM continuam valendo.
+> **Atualização ([ADR-019](ADR-019-deploy-na-aws-academy-learner-lab.md)):** o `prod` roda na AWS Academy Learner Lab. O `fiapx-infra` não cria mais SES, OIDC nem bucket do site; o front-end é um pod nginx no EKS servido pela URL do API Gateway (não CloudFront), e os parâmetros `ses/*`, `web/bucket` e `web/cloudfront_distribution_id` deixam de existir; entram `apigw/url`, `alb/web_target_group_arn`, `ecr/fiapx-web/url` e `notification/smtp_*`, e `web/url` passa a ser a URL do API Gateway (catálogo em [parametros-ssm.md](../06-deploy/parametros-ssm.md)). Sem roles por serviço nem OIDC, todos usam a `LabRole` e as credenciais do lab. O polyrepo e a integração pelo SSM continuam valendo.
 
 ## Contexto
 

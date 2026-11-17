@@ -5,7 +5,7 @@
 - **Decisores:** Diego Fenille, Eduardo Santos
 - **Relacionados:** RFC-007 (banco de dados e cache), [ADR-001](ADR-001-polyrepo-e-integracao-via-ssm-parameter-store.md), [ADR-004](ADR-004-autenticacao-api-gateway-lambda-authorizer-jwt-rs256.md), [ADR-008](ADR-008-saga-orquestrada-com-outbox-e-consumidores-idempotentes.md), [ADR-013](ADR-013-notificacao-sqs-lambda-ses-e-historico-no-dynamodb.md)
 
-> **Atualização ([ADR-019](ADR-019-deploy-na-aws-academy-learner-lab.md)):** no lab, o Aurora Serverless v2 vai de **0,5 a 2 ACU**, numa instância só (sem Multi-AZ, Enhanced Monitoring nem Performance Insights). Se o lab recusar `db.serverless`, a variável `aurora_instance_class = "db.t4g.medium"` troca para instância provisionada. A capacidade é acompanhada no CloudWatch, não no New Relic. Um database por serviço no mesmo cluster continua.
+> **Atualização ([ADR-019](ADR-019-deploy-na-aws-academy-learner-lab.md)):** no lab, o Aurora é **provisionado `db.t3.medium`**, numa instância só (sem Multi-AZ, Enhanced Monitoring nem Performance Insights): o lab nega `rds:CreateDBInstance` com `db.serverless`, então o Serverless v2 deste ADR não é aplicado ali. A classe é a variável `aurora_instance_class`; numa conta própria, `db.serverless` volta a valer. O uso da instância (`CPUUtilization`, `FreeableMemory`) é acompanhado no CloudWatch, não no New Relic. Um database por serviço no mesmo cluster continua.
 
 ## Contexto
 

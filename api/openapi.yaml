@@ -6,9 +6,9 @@ info:
   description: |
     API pública consolidada do FIAP X (`fiapx-auth` + `fiapx-video-api`).
 
-    - Todas as rotas ficam sob o prefixo `/api`, no endpoint do API Gateway (HTTP API). O front-end fica em outra
-      origem (S3 static website, ADR-019) e usa `VITE_API_BASE_URL=<URL do API Gateway>/api`; o API Gateway
-      responde ao preflight CORS (origem = URL do site) antes do authorizer.
+    - Todas as rotas ficam sob o prefixo `/api`, no endpoint do API Gateway (HTTP API). O front-end fica na mesma
+      origem (a rota `$default` do mesmo API Gateway leva ao pod nginx do site, ADR-019) e usa
+      `VITE_API_BASE_URL=/api`; por isso a API não tem CORS.
     - `/auth/*` é atendido pelas Lambdas do `fiapx-auth`; `/videos*` e `/health/*` pelo `fiapx-video-api`
       (API Gateway → VPC Link → ALB interno).
     - As rotas de vídeos e `PUT /auth/password` exigem `Authorization: Bearer <JWT>`. O token é emitido pelo login (RS256,

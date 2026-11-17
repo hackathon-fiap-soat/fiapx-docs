@@ -5,7 +5,7 @@
 - **Decisores:** Diego Fenille, Eduardo Santos
 - **Relacionados:** RFC-009 (hospedagem do front-end), [ADR-004](ADR-004-autenticacao-api-gateway-lambda-authorizer-jwt-rs256.md), [ADR-006](ADR-006-upload-direto-s3-e-inicio-da-saga-pelo-evento.md), [ADR-010](ADR-010-api-gateway-vpc-link-alb-interno-e-targetgroupbinding.md)
 
-> **Atualização ([ADR-019](ADR-019-deploy-na-aws-academy-learner-lab.md)):** o CloudFront foi negado no lab. O site é um **S3 static website** (bucket `fiapx-<env>-web-<account_id>`, HTTP, leitura pública só de objetos, `index.html` também como documento de erro). Site e API ficam em **origens diferentes**: CORS no HTTP API (origem = URL do site), `VITE_API_BASE_URL=<URL do API Gateway>/api` e CORS do bucket de vídeos com a URL do site. Não há invalidação de cache. Plano B: pod nginx no EKS pela rota `$default` do API Gateway. React + Vite e o token em memória + `sessionStorage` continuam.
+> **Atualização ([ADR-019](ADR-019-deploy-na-aws-academy-learner-lab.md)):** o CloudFront foi negado no lab, e o Block Public Access da conta impede um bucket público para o site. A **mesma origem continua**, agora pelo **API Gateway**, sem CloudFront: o site é um pod nginx (`nginxinc/nginx-unprivileged`) com o build do Vite, no EKS; a rota `$default` do HTTP API (sem authorizer) leva ao ALB interno pelo VPC Link, e o padrão do listener vai para o target group do site (`$default` → ALB → pod nginx), enquanto `/api/*` segue para as rotas específicas. `VITE_API_BASE_URL=/api`, sem CORS na API, em HTTPS na URL do API Gateway; o CORS do bucket de vídeos usa essa URL. Não há bucket do site, módulo `web-hosting` nem invalidação de cache. React + Vite e o token em memória + `sessionStorage` continuam.
 
 ## Contexto
 

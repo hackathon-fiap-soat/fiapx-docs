@@ -1,6 +1,6 @@
 # Modelo de dados
 
-Um cluster **Aurora MySQL Serverless v2** (MySQL 8.0, de 0,5 a 2 ACU) com um **database e um usuário por
+Um cluster **Aurora MySQL** (MySQL 8.0, provisionado `db.t3.medium`, uma instância) com um **database e um usuário por
 serviço**. Nenhum serviço acessa o database de outro. O histórico de notificações fica no **DynamoDB** e
 os arquivos no **S3**.
 
@@ -248,6 +248,6 @@ Billing `PAY_PER_REQUEST`, PITR ligado e criptografia padrão. Criada pelo Terra
 | `uploads/{video_id}.{ext}` | Vídeo original | Navegador (POST pré-assinado) | Expira em 7 dias |
 | `results/{video_id}/frames.zip` | Pacote de frames | `video-processor` | Expira em 30 dias |
 
-Block Public Access ligado, SSE-S3, CORS só para `POST` com origem igual à URL do site (S3 static website,
+Block Public Access ligado, SSE-S3, CORS só para `POST` com origem igual à URL do site (a URL do API Gateway,
 [ADR-019](../04-adrs/ADR-019-deploy-na-aws-academy-learner-lab.md)), e
 notificação `s3:ObjectCreated:*` com filtro de prefixo `uploads/` para a fila `video-uploaded`.
