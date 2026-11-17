@@ -12,7 +12,9 @@ região `us-east-1`. Elas são atualizadas a cada sessão do lab
 
 - **Pull request obrigatório** para mudar a `main`. A aprovação é opcional (decisão do time): qualquer
   integrante, inclusive o autor, pode fazer o merge depois que os checks passarem.
-- **Checks obrigatórios** em todo PR: lint, testes, cobertura ≥ 80% e Quality Gate do SonarCloud.
+- **Checks obrigatórios** em todo PR (proteção da `main` em todos os repositórios): lint, testes, cobertura ≥ 80% e
+  Quality Gate do [SonarCloud](https://sonarcloud.io/organizations/hackathon-fiap-soat/projects). O scanner roda no CI
+  depois dos testes (`sonar-project.properties` em cada repositório, Secret `SONAR_TOKEN`), com a action fixada pelo SHA.
 - **Deploy só na `main`**, com o GitHub Environment `prod`.
 - **Imagens imutáveis:** tag igual ao SHA do commit, scan com Trivy (falha em `CRITICAL`).
 - **`terraform apply` só pelo GitHub Actions, sem exceção.** Apply local só no LocalStack. Não há bootstrap
