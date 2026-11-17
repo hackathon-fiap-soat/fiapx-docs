@@ -40,7 +40,7 @@ A documentação vem antes do código: os outros repositórios implementam o que
 
 ### 4. Decisões
 
-- [ADRs](04-adrs/README.md) (19 decisões)
+- [ADRs](04-adrs/README.md) (20 decisões)
 - [RFCs](05-rfcs/README.md) (10 comparações de alternativas)
 
 ### 5. Deploy e operação
@@ -77,7 +77,7 @@ A documentação vem antes do código: os outros repositórios implementam o que
 | [`fiapx-auth`](https://github.com/hackathon-fiap-soat/fiapx-auth) | Lambdas de register, login e authorizer (JWT RS256) e rotas `/api/auth/*` no API Gateway |
 | [`fiapx-video-api`](https://github.com/hackathon-fiap-soat/fiapx-video-api) | Gestão de vídeos, POST pré-assinado no S3, listagem de status, download e orquestração da SAGA (outbox e consumidores idempotentes) |
 | [`fiapx-video-processor`](https://github.com/hackathon-fiap-soat/fiapx-video-processor) | Consome `ProcessVideo`/`CleanupArtifacts`, extrai 1 frame por segundo com ffmpeg, gera o zip no S3 e responde à SAGA. Escalado por KEDA |
-| [`fiapx-notification`](https://github.com/hackathon-fiap-soat/fiapx-notification) | Fila SQS → Lambda que envia e-mail por SMTP (Brevo; Mailpit no local), registra cada envio no DynamoDB (chave = e-mail) e responde à SAGA |
+| [`fiapx-notification`](https://github.com/hackathon-fiap-soat/fiapx-notification) | Fila SQS → Lambda que envia e-mail por SMTP (OCI Email Delivery; Mailpit no local), registra cada envio no DynamoDB (chave = e-mail) e responde à SAGA |
 | [`fiapx-web`](https://github.com/hackathon-fiap-soat/fiapx-web) | Cadastro, login, upload de vários vídeos, lista de status e download do zip. Servido por um pod nginx no EKS, na mesma origem da API: a URL do API Gateway (rota `$default` → ALB → site), sem CORS na API |
 
 ## Stack

@@ -87,7 +87,7 @@ flowchart LR
 | Modelo de mensagem | `Template` | `VIDEO_FAILED` (obrigatório), `VIDEO_COMPLETED` (opcional), `PASSWORD_RESET` e `PASSWORD_CHANGED`, em pt-BR, nas versões HTML e texto |
 | Status da notificação | `NotificationStatus` | `PENDING`, `SENT` ou `FAILED` |
 | Histórico de envios | tabela `notifications` | Todos os e-mails enviados para um destinatário, em ordem cronológica |
-| Remetente | — | E-mail do time verificado no provedor SMTP (`SMTP_FROM`), com nome de exibição "FIAP X" |
+| Remetente | — | Endereço do time aprovado no provedor SMTP (Approved Sender do OCI Email Delivery, `SMTP_FROM`), com nome de exibição "SOAT FIAP" |
 
 ## Termos transversais
 

@@ -52,7 +52,7 @@ flowchart LR
   WRK -->|respostas| Q_REPLY[["SQS<br/>saga-replies.fifo"]]
 
   Q_NOTIF --> LNOTIF["Lambda notification<br/>fiapx-notification"]
-  LNOTIF -->|"SMTP"| SMTP["Provedor SMTP<br/>Brevo"]
+  LNOTIF -->|"SMTP"| SMTP["Provedor SMTP<br/>OCI Email Delivery"]
   LNOTIF <--> DDB[("DynamoDB<br/>notifications")]
   LNOTIF -->|respostas| Q_REPLY
   Q_REPLY --> CONS
@@ -75,7 +75,7 @@ containers enviam APM, logs e métricas ao New Relic (omitido no diagrama para n
 | `saga-consumer` | mesma imagem, `php artisan saga:consume` | `fiapx-video-api` | Consome `video-uploaded` e `saga-replies.fifo` e avança a SAGA |
 | CronJob | mesma imagem, `php artisan schedule:run` | `fiapx-video-api` | Timeouts da SAGA e expiração de uploads pendentes |
 | `video-processor` | PHP 8.4.27 + Laravel 13 + ffmpeg | `fiapx-video-processor` | Extrai os frames, gera o zip e responde à SAGA |
-| Lambda `notification` | Node.js 24 | `fiapx-notification` | Envia e-mails por SMTP (Nodemailer, provedor Brevo) e registra o histórico no DynamoDB |
+| Lambda `notification` | Node.js 24 | `fiapx-notification` | Envia e-mails por SMTP (Nodemailer, provedor OCI Email Delivery) e registra o histórico no DynamoDB |
 | Aurora MySQL (`db.t3.medium`, uma instância) | MySQL 8.0 | `fiapx-infra` | Databases `fiapx_auth` e `fiapx_video`, um usuário por serviço |
 | DynamoDB `notifications` | NoSQL | `fiapx-notification` | Histórico e idempotência dos e-mails |
 | S3 `fiapx-videos` | S3 | `fiapx-infra` | Vídeos (`uploads/`, 7 dias) e zips (`results/`, 30 dias) |

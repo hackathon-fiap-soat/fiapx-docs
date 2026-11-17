@@ -5,7 +5,7 @@
 - **Decisores:** Diego Fenille, Eduardo Santos
 - **Relacionados:** [ADR-013](ADR-013-notificacao-sqs-lambda-ses-e-historico-no-dynamodb.md), [ADR-002](ADR-002-aws-e-terraform-com-backend-s3-e-lock-nativo.md)
 
-> **Atualização ([ADR-019](ADR-019-deploy-na-aws-academy-learner-lab.md)):** este ADR deixou de valer. A AWS Academy Learner Lab nega o SES (e o Route 53 Domains), então não há domínio `hackfiapf5.click`, DKIM/SPF/DMARC nem sandbox. O e-mail sai por SMTP externo (Brevo), com um remetente do time verificado no provedor. O texto abaixo fica como registro histórico.
+> **Atualização ([ADR-019](ADR-019-deploy-na-aws-academy-learner-lab.md)):** este ADR deixou de valer. A AWS Academy Learner Lab nega o SES (e o Route 53 Domains), então não há domínio `hackfiapf5.click`, DKIM/SPF/DMARC nem sandbox. O e-mail sai por SMTP externo (OCI Email Delivery), com um remetente do time verificado no provedor. O texto abaixo fica como registro histórico.
 
 ## Contexto
 

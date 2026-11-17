@@ -5,7 +5,7 @@
 - **Decisores:** Diego Fenille, Eduardo Santos
 - **Relacionados:** [ADR-004](ADR-004-autenticacao-api-gateway-lambda-authorizer-jwt-rs256.md), [ADR-013](ADR-013-notificacao-sqs-lambda-ses-e-historico-no-dynamodb.md), [ADR-015](ADR-015-remetente-de-email-dominio-proprio-e-sandbox-do-ses.md)
 
-> **Atualização ([ADR-019](ADR-019-deploy-na-aws-academy-learner-lab.md)):** não há mais sandbox do SES: o e-mail sai por SMTP externo (Brevo) e chega a qualquer destinatário, sem verificação prévia. O site é um S3 static website, e o link de redefinição usa a URL dele (`/fiapx/<env>/web/url`). O resto deste ADR continua.
+> **Atualização ([ADR-019](ADR-019-deploy-na-aws-academy-learner-lab.md)):** não há mais sandbox do SES: o e-mail sai por SMTP externo (OCI Email Delivery, [ADR-020](ADR-020-email-pelo-oci-email-delivery.md)) e chega a qualquer destinatário, sem verificação prévia. O site é um S3 static website, e o link de redefinição usa a URL dele (`/fiapx/<env>/web/url`). O resto deste ADR continua.
 
 ## Contexto
 

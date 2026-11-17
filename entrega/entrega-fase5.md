@@ -28,7 +28,7 @@
 | [`fiapx-auth`](https://github.com/hackathon-fiap-soat/fiapx-auth) | Cadastro, login e authorizer (Lambdas Node.js) |
 | [`fiapx-video-api`](https://github.com/hackathon-fiap-soat/fiapx-video-api) | API de vídeos e orquestração da SAGA (Laravel) |
 | [`fiapx-video-processor`](https://github.com/hackathon-fiap-soat/fiapx-video-processor) | Worker de extração de frames (Laravel + ffmpeg, KEDA) |
-| [`fiapx-notification`](https://github.com/hackathon-fiap-soat/fiapx-notification) | E-mails por SMTP (Brevo) e histórico no DynamoDB |
+| [`fiapx-notification`](https://github.com/hackathon-fiap-soat/fiapx-notification) | E-mails por SMTP (OCI Email Delivery) e histórico no DynamoDB |
 | [`fiapx-web`](https://github.com/hackathon-fiap-soat/fiapx-web) | Front-end React |
 
 O usuário `soat-architecture` tem acesso de leitura a todos os repositórios.
@@ -44,7 +44,7 @@ solução distribuída na AWS, implantada numa conta da AWS Academy Learner Lab
   do usuário e pede o processamento por fila (SQS).
 - Workers no EKS, escalados pelo KEDA de 1 a 10 pods conforme a fila, extraem os frames com `ffmpeg` e
   sobem o zip no S3.
-- Em caso de falha, a saga compensa os passos anteriores e envia um e-mail ao usuário por SMTP (Brevo).
+- Em caso de falha, a saga compensa os passos anteriores e envia um e-mail ao usuário por SMTP (OCI Email Delivery).
 - Cadastro e login ficam em Lambdas Node.js atrás do API Gateway, com JWT RS256 validado por um
   Lambda Authorizer.
 - O front-end React é servido por um pod nginx no EKS, na mesma origem da API: a URL do API Gateway (rota
@@ -58,7 +58,7 @@ solução distribuída na AWS, implantada numa conta da AWS Academy Learner Lab
 | RF2 — nenhuma requisição perdida | S3 → SQS, outbox, DLQ, idempotência | a preencher (DLQs vazias após o k6) |
 | RF3 — usuário e senha | API Gateway + Lambdas + authorizer | a preencher |
 | RF4 — listagem de status | `GET /api/videos` | a preencher |
-| RF5 — notificação de erro | SAGA → SQS → Lambda → SMTP (Brevo) | a preencher (e-mail recebido + item no DynamoDB) |
+| RF5 — notificação de erro | SAGA → SQS → Lambda → SMTP (OCI Email Delivery) | a preencher (e-mail recebido + item no DynamoDB) |
 | RT1 a RT5 | Aurora, DynamoDB e S3; EKS, KEDA e serviços gerenciados; GitHub; testes ≥ 80% + BDD + Sonar; GitHub Actions | a preencher (cobertura, Sonar, pipelines) |
 
 ## Arquitetura

@@ -13,7 +13,7 @@ C4Context
   System(fiapx, "Plataforma FIAP X", "Cadastro e login, upload de vídeos, processamento assíncrono, status, download e avisos por e-mail")
 
   System_Ext(email, "Caixa de e-mail do usuário", "Recebe o aviso de falha e, opcionalmente, o de conclusão")
-  System_Ext(smtp, "Provedor SMTP (Brevo)", "Envio de e-mails transacionais por SMTP autenticado")
+  System_Ext(smtp, "Provedor SMTP (OCI Email Delivery)", "Envio de e-mails transacionais por SMTP autenticado")
   System_Ext(newrelic, "New Relic", "APM, logs, dashboards e alertas")
   System_Ext(github, "GitHub", "Código, pull requests e GitHub Actions (CI/CD)")
   System_Ext(sonar, "SonarCloud", "Análise estática e Quality Gate")
@@ -35,7 +35,7 @@ C4Context
 | Usuário | Pessoa | Cadastra-se, faz login, envia vários vídeos, acompanha o status e baixa os zips |
 | Time de desenvolvimento | Pessoa | Evolui o sistema por pull requests e responde aos alertas |
 | Plataforma FIAP X | Sistema | Todo o escopo do hackathon, rodando na AWS Academy Learner Lab (detalhado no [nível 2](c4-containers.md)) |
-| Provedor SMTP (Brevo) | Externo | Envio de e-mails a partir de um remetente do time verificado no provedor ([ADR-019](../04-adrs/ADR-019-deploy-na-aws-academy-learner-lab.md)) |
+| Provedor SMTP (OCI Email Delivery) | Externo | Envio de e-mails a partir de um remetente do time aprovado no provedor ([ADR-019](../04-adrs/ADR-019-deploy-na-aws-academy-learner-lab.md) e [ADR-020](../04-adrs/ADR-020-email-pelo-oci-email-delivery.md)) |
 | New Relic | Externo | Observabilidade da aplicação, do cluster e das Lambdas |
 | GitHub e SonarCloud | Externos | Versionamento, pipelines de CI/CD e Quality Gate |
 

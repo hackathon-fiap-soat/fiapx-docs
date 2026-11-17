@@ -82,6 +82,9 @@ por um Job do `fiapx-infra` (`sql/create-databases.sql`) dentro do cluster.
 
 ### 5. E-mail por SMTP externo (no lugar do SES)
 
+> **Atualização ([ADR-020](ADR-020-email-pelo-oci-email-delivery.md)):** o provedor passou a ser o OCI Email
+> Delivery (`smtp.email.sa-saopaulo-1.oci.oraclecloud.com:587`); o Brevo não entregava as mensagens. O resto desta seção continua valendo.
+
 - A Lambda de notificação envia por **SMTP autenticado** (Nodemailer) num provedor externo. O padrão é o
   **Brevo** (`smtp-relay.brevo.com:587`, STARTTLS, plano gratuito de 300 e-mails/dia); qualquer provedor
   SMTP serve, porque host, porta, usuário, senha e remetente são configuração.
