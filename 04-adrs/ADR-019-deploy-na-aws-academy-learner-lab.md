@@ -124,6 +124,11 @@ negado. Vale então o plano B que este ADR já previa:
   e cabe numa sessão de 4 h.
 - Ao fim da sessão, o lab pode **parar** as instâncias EC2 (nós do EKS); EKS, NAT, ALB e Aurora continuam
   cobrando. Por isso, ao terminar a demonstração, rodar o `destroy-all` (ADR-018).
+- O `deploy-all` também roda sozinho depois de todo `apply` com sucesso no `fiapx-infra`, e cada
+  implementação termina com um teste de deploy na AWS seguido de `destroy-all`
+  ([fluxo de deploy](../06-deploy/fluxo-de-deploy.md#teste-de-deploy-ao-fim-de-cada-implementação)).
+- As restrições do lab encontradas no primeiro `apply` e a checagem antes de infraestrutura nova estão em
+  [ambientes](../06-deploy/ambientes.md#restrições-conhecidas-do-lab).
 - Custo estimado com tudo ligado: ~US$ 10/dia (EKS ~2,40; 2× t3.large ~4,00; Aurora db.t3.medium ~2,00; NAT ~1,10; ALB
   ~0,55), abatido do crédito do lab.
 

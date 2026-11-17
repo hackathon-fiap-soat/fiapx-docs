@@ -100,14 +100,50 @@ Com tudo ligado, o custo estimado é de **~US$ 10/dia**, abatido do crédito do 
 
 Valores aproximados, para orientar a decisão de manter o ambiente desligado fora das demonstrações.
 
+## Restrições conhecidas do lab
+
+Encontradas nos primeiros `apply` (2026-11-17) e já tratadas no código. Toda infraestrutura nova deve ser
+conferida contra elas antes do PR:
+
+| Restrição | Sintoma | Como o projeto lida |
+|---|---|---|
+| Sem OIDC, sem criar roles | `iam:CreateRole` negado | credenciais do lab em Secrets; tudo usa a `LabRole` (ADR-019) |
+| `LabRole` não confia em `pods.eks` nem em Metric Streams | sem Pod Identity, sem métricas da AWS no New Relic | pods e KEDA usam a credencial do nó (IMDS com 2 saltos) |
+| SES, CloudFront, Route 53 Domains negados | `AccessDenied` | SMTP externo (Brevo); site no EKS atrás do API Gateway |
+| Block Public Access da conta | `PutBucketPolicy` público negado | nenhum bucket público |
+| SCP nega `s3:GetBucketObjectLockConfiguration` | `aws_s3_bucket` falha ao ler o bucket | buckets criados pelo AWS CLI no módulo `s3-bucket` |
+| `db.serverless` negado; RDS até `medium` | `rds:CreateDBInstance` negado | Aurora `db.t3.medium` |
+| Spot e instâncias acima de `large` negados | `UnauthorizedOperation` | nós `t3.large` on-demand |
+| Chave `aws/dynamodb` inutilizável | `KMS key ... does not exist` no `CreateTable` | tabela com a criptografia padrão (chave da AWS) |
+| Descrição de security group só ASCII | `Character sets beyond ASCII are not supported` | descrições sem acento |
+
+Problemas que não são do lab, mas só aparecem na AWS (o LocalStack não cobre):
+
+| Problema | Sintoma | Correção |
+|---|---|---|
+| Permissão do authorizer num HTTP API | 500 em rota autenticada; access log: *doesn't have permissions to call the authorizer* | `source_arn` = `<execution_arn>/authorizers/<id>`, sem stage |
+| `runAsNonRoot` com `USER` por nome | `CreateContainerConfigError`: *non-numeric user* | `USER 82:82` (UID numérico) no Dockerfile |
+| Webhook do Load Balancer Controller | `x509: certificate signed by unknown authority` ao criar Service | `keepTLSSecret=true` e add-ons dependendo do controller |
+| Release do Helm que falhou | `cannot re-use a name that is still in use` | `atomic = true` nos charts |
+
+**Checagem antes do PR de infraestrutura nova:**
+
+- Permissões: `aws iam simulate-principal-policy --policy-source-arn arn:aws:iam::<conta>:role/voclabs
+  --action-names <ações>`, e o mesmo com `role/LabRole` para o que roda nos pods e nas Lambdas. Uma negação
+  explícita (`explicitDeny`) é real. Uma `implicitDeny` pode ser falso negativo de regra com condição, então
+  confira com o recurso real.
+- Criptografia: não pedir chave KMS gerenciada (`aws/<serviço>`) sem antes verificar que outro recurso na
+  conta já a usa.
+- Diagnóstico depois de uma falha: access log do API Gateway (`/aws/apigateway/fiapx-prod`), logs das
+  Lambdas, `kubectl describe pod` e eventos do namespace.
+
 ## Desligar e religar
 
 Para não consumir o crédito do lab, o ambiente `prod` é destruído fora das demonstrações:
 
 1. Com a sessão do lab aberta e os Secrets atualizados, rodar o workflow manual `destroy-all.yml` no
    `fiapx-infra`, digitando a confirmação `destroy-prod`.
-2. O workflow desliga o `prevent_destroy` (Aurora, bucket de vídeos e tabela DynamoDB) por variável
-   explícita e derruba tudo na ordem inversa da subida: front-end, aplicações do EKS, Lambdas e por fim a
+2. O workflow desliga a proteção do Aurora (`protect=false`) e derruba tudo na ordem inversa da subida: front-end, aplicações do EKS, Lambdas e por fim a
    infraestrutura ([ADR-018](../04-adrs/ADR-018-orquestracao-do-deploy-no-github-actions.md)).
 3. Fica de pé só o bucket do state (`fiapx-tfstate-<account_id>`).
 
