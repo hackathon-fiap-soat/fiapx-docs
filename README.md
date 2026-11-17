@@ -50,6 +50,7 @@ A documentação vem antes do código: os outros repositórios implementam o que
 - [Parâmetros SSM e segredos](06-deploy/parametros-ssm.md): chaves que ligam os repositórios
 - [Observabilidade](07-observabilidade/observabilidade.md) e
   [dashboard do New Relic](07-observabilidade/newrelic-dashboard.json)
+- [Teste de carga (k6)](tests/load/README.md): 30 vídeos em 1 minuto, KEDA escalando e evidências da Etapa 10
 
 ### 6. Contratos
 

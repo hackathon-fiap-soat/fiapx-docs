@@ -164,3 +164,5 @@ vite.config.ts.timestamp-*
 
 # Chave PÚBLICA de teste do contrato do JWT (não é segredo; a privada foi descartada)
 !contracts/jwt/public-key.test.pem
+# Kubeconfig temporário do teste de carga (o script apaga ao terminar)
+tests/load/evidencias/**/.kubeconfig
