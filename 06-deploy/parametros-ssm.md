@@ -58,6 +58,7 @@ EKS, servido pela URL do API Gateway ([ADR-019](../04-adrs/ADR-019-deploy-na-aws
 | `fiapx/<env>/db/auth` | JSON `{engine, host, port, username, password, dbname}` | `fiapx-auth` |
 | `fiapx/<env>/db/video` | mesmo formato | `fiapx-video-api` |
 | `fiapx/<env>/notification/smtp` | JSON `{user, password, from}`, gravado pelo Terraform do `fiapx-notification` a partir dos GitHub Secrets `SMTP_USER`, `SMTP_PASSWORD` e `SMTP_FROM` | Lambda `notification` (na inicialização) |
+| `fiapx/<env>/auth/newrelic`, `fiapx/<env>/notification/newrelic` | JSON `{LicenseKey}`, gravado pelo Terraform de cada repositório a partir do GitHub Secret `NEW_RELIC_LICENSE_KEY` (só existe com o Secret preenchido) | extensão do New Relic nas Lambdas (`NEW_RELIC_LICENSE_KEY_SECRET`) |
 
 No ambiente local, a chave RSA é gerada a cada subida do LocalStack, e nenhuma chave fica versionada. O
 segredo SMTP local aponta para o Mailpit, sem autenticação (usuário e senha vazios, remetente fictício).
@@ -71,4 +72,7 @@ repositórios são públicos.
 | Secret | Onde | Uso |
 |---|---|---|
 | `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_SESSION_TOKEN` | organização `hackathon-fiap-soat` (ou cada repositório, sem acesso de admin) | credenciais da sessão da AWS Academy Learner Lab, atualizadas a cada sessão (~4 h) |
-| `SMTP_USER`, `SMTP_PASSWORD`, `SMTP_FROM` | `fiapx-notification` | credenciais do provedor SMTP (OCI Email Delivery) e remetente aprovado; o Terraform grava em `fiapx/<env>/notification/smtp` |
+| `SMTP_USER`, `SMTP_PASSWORD`, `SMTP_FROM` | `fiapx-notification` e `fiapx-infra` (o `deploy-all` repassa com `secrets: inherit`) | credenciais do provedor SMTP (OCI Email Delivery) e remetente aprovado; o Terraform grava em `fiapx/<env>/notification/smtp` |
+| `NEW_RELIC_LICENSE_KEY` | repositórios que fazem deploy | license key (ingest) do New Relic: `nri-bundle` no cluster (`fiapx-infra`), agente PHP (Secret do Kubernetes no video-api e no processor) e segredo da extensão das Lambdas (auth e notification). Vazio = sem New Relic |
+| `NEW_RELIC_ACCOUNT_ID` | `fiapx-auth`, `fiapx-notification` (e `fiapx-infra`, que repassa) | id da conta do New Relic, exigido pela extensão das Lambdas |
+| `SONAR_TOKEN` | repositórios com código | token do SonarCloud para a análise no CI (Etapa 8) |

@@ -46,7 +46,7 @@ Atributo comum para seguir um vídeo de ponta a ponta: `video_id`, junto com `sa
 |---|---|---|---|
 | EKS | Helm `nri-bundle` (infraestrutura, kube-state-metrics, eventos do Kubernetes, logs dos pods) | `fiapx-infra/modules/eks-addons` | `K8sClusterSample`, `K8sNodeSample`, `K8sPodSample`, `K8sDeploymentSample`, `K8sHpaSample`, `InfrastructureEvent`, `Log` |
 | video-api e video-processor | Agente New Relic PHP na imagem Docker; logs JSON (Monolog `JsonFormatter`) no stdout | Dockerfile e `config/logging.php` de cada repositório | `Transaction`, `TransactionError`, `Span`, eventos customizados, `Log` (logs in context) |
-| Lambdas (auth e notification) | Layer com a extensão do New Relic para Node.js (envia direto com a license key, sem integração da conta AWS) + logs JSON no stdout | `infra/` (Terraform) de cada repositório | `AwsLambdaInvocation`, `AwsLambdaInvocationError`, `Span`, `Log` |
+| Lambdas (auth e notification) | Layer `NewRelicNodeJS24XARM64` (versão fixa) com a extensão e o agente Node.js; o handler vira `newrelic-lambda-wrapper.handler` e o original fica em `NEW_RELIC_LAMBDA_HANDLER`. A extensão lê a license key do segredo `fiapx/<env>/<repo>/newrelic` e envia direto, sem integração da conta AWS. Logs JSON no stdout | `infra/newrelic.tf` de cada repositório | `AwsLambdaInvocation`, `AwsLambdaInvocationError`, `Span`, `Log` |
 | SQS, DLQs, Aurora, API Gateway, S3, DynamoDB | Métricas nativas do CloudWatch e alarmes com SNS (não chegam ao New Relic) | `fiapx-infra` e `fiapx-notification` (Terraform) | nada; ver [CloudWatch](#serviços-gerenciados-no-cloudwatch) |
 
 Nomes das aplicações no APM (`newrelic.appname` / `NEW_RELIC_APP_NAME`): `fiapx-video-api`,
