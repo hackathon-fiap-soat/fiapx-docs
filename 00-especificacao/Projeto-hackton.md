@@ -459,18 +459,18 @@ Frames, Pacote zip, Link de download, E-mail.
 | 002 | AWS como cloud e Terraform como IaC, com backend S3 e lock nativo |
 | 003 | DDD + Clean Architecture nos serviços Laravel |
 | 004 | Autenticação com API Gateway + Lambda Node.js + Lambda Authorizer e JWT RS256 |
-| 005 | Aurora MySQL Serverless v2 com um database por serviço no mesmo cluster |
+| 005 | Aurora MySQL Serverless v2 com um database por serviço no mesmo cluster (revisado pelo ADR-019) |
 | 006 | Upload direto ao S3 via POST pré-assinado e início da SAGA pelo evento do S3 |
 | 007 | Amazon SQS como mensageria (Standard para comandos, FIFO para respostas, DLQ em todas) |
 | 008 | SAGA orquestrada no video-api com transactional outbox e consumidores idempotentes |
 | 009 | Worker Laravel no EKS escalado por KEDA (1 vídeo por pod, heartbeat de visibility) |
 | 010 | Exposição da API: API Gateway → VPC Link → ALB interno + TargetGroupBinding |
 | 011 | Observabilidade com New Relic |
-| 012 | CI/CD com GitHub Actions + OIDC e ordem de deploy entre repositórios |
-| 013 | Notificação: SQS → Lambda Node.js → SES, com histórico e idempotência no DynamoDB (PK `email`, SK `message_id`) |
-| 014 | Front-end React + Vite em S3 + CloudFront, com `/api/*` na mesma origem |
+| 012 | CI/CD com GitHub Actions + OIDC e ordem de deploy entre repositórios (revisado pelo ADR-019) |
+| 013 | Notificação: SQS → Lambda Node.js → SES, com histórico e idempotência no DynamoDB (PK `email`, SK `message_id`) (revisado pelo ADR-019) |
+| 014 | Front-end React + Vite em S3 + CloudFront, com `/api/*` na mesma origem (revisado pelo ADR-019) |
 | 015 | Remetente de e-mail: domínio próprio no Route 53 com DKIM/SPF/DMARC e uso do sandbox do SES (substituído pelo ADR-019) |
-| 016 | `terraform apply` somente via GitHub Actions; apply local apenas para testes (§11.5) |
+| 016 | `terraform apply` somente via GitHub Actions; apply local apenas para testes (§11.5) (revisado pelo ADR-019) |
 | 017 | Recuperação e troca de senha no `fiapx-auth`, com e-mail pelo `fiapx-notification` |
 | 018 | Orquestração do deploy no GitHub Actions: `deploy-all.yml` e `destroy-all.yml` no `fiapx-infra`, chamando o `deploy.yml` reutilizável de cada repositório |
 | 019 | Deploy na AWS Academy Learner Lab: credenciais do lab em GitHub Secrets, `LabRole`, SMTP externo e site no EKS atrás do mesmo API Gateway (substitui o ADR-015 e partes dos ADRs 002, 005, 009–014 e 016) |
