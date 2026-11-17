@@ -31,7 +31,7 @@ região `us-east-1`. Elas são atualizadas a cada sessão do lab
 | `fiapx-docs` | markdownlint, validação dos JSON Schemas e exemplos, lint do OpenAPI (Spectral), renderização dos diagramas Mermaid | GitHub Pages (opcional) |
 | `fiapx-infra` | `fmt -check`, `validate`, `tflint`, `checkov`, `plan` comentado no PR | `apply` no environment `prod` |
 | `fiapx-auth` e `fiapx-notification` | eslint, jest (cobertura ≥ 80%), Sonar, `terraform plan` | build do zip → `terraform apply` → (auth) invocação da Lambda `migrate`, que aplica as migrations dentro da VPC, porque o runner não alcança o Aurora privado → smoke test |
-| `fiapx-web` | eslint, vitest (cobertura ≥ 80%), Sonar, build | build com `VITE_API_BASE_URL=<apigw/url>/api` (lido do SSM) → `s3 sync` para o bucket do S3 static website → smoke com Playwright na URL do site |
+| `fiapx-web` | eslint, vitest (cobertura ≥ 80%), Sonar, build | build da imagem nginx com `VITE_API_BASE_URL=/api` → push no ECR `fiapx-web` → `terraform apply` do `infra/` (rota `$default` do HTTP API) → `kubectl apply -k` (Deployment, Service e `TargetGroupBinding`) → `rollout status` → smoke com Playwright na URL do API Gateway |
 | `fiapx-video-api` | pint, phpstan (nível 6+), phpunit (cobertura ≥ 80%, com MySQL e LocalStack do `fiapx-infra/local`), behat (SAGA), Sonar, build + Trivy, kustomize + kubeconform, `terraform plan` do `infra/` | push no ECR → `terraform apply` do `infra/` (rotas) → `aws.env` do SSM e Secrets do banco e do app → manifests sem os Deployments → Job `migrate` concluído → Deployments → `rollout status` → smoke test |
 | `fiapx-video-processor` | pint, phpstan, phpunit (inclui integração com `ffmpeg` real e um vídeo de 3 s), Sonar, build + Trivy | push no ECR → `kustomize edit set image` → `kubectl apply -k` → `rollout status` |
 
@@ -53,7 +53,7 @@ flowchart TB
   end
   subgraph WEB["Front-end: fiapx-web"]
     direction LR
-    W1["PR"] --> W2["eslint"] --> W3["vitest ≥ 80%"] --> W4["SonarCloud"] --> W5["npm run build"] --> W6["merge na main"] --> W7["build com<br/>URL da API do SSM"] --> W8["s3 sync<br/>S3 website"] --> W9["Playwright smoke"]
+    W1["PR"] --> W2["eslint"] --> W3["vitest ≥ 80%"] --> W4["SonarCloud"] --> W5["npm run build"] --> W6["merge na main"] --> W7["docker build nginx<br/>VITE_API_BASE_URL=/api"] --> W8["push no ECR"] --> W9["terraform apply<br/>rota $default"] --> W10["kubectl apply -k<br/>rollout status"] --> W11["Playwright smoke<br/>URL do API Gateway"]
   end
   EKS ~~~ LAMBDA ~~~ INFRA ~~~ WEB
 ```
@@ -68,7 +68,7 @@ Smoke tests: no `fiapx-auth`, cadastro e login de um usuário de teste; no `fiap
 
 ```mermaid
 flowchart TD
-  B["bucket do state<br/>fiapx-tfstate-account_id<br/>criado pelo workflow, idempotente"] --> I["fiapx-infra envs/prod<br/>VPC, EKS, Aurora, S3, SQS, ECR, API GW, site, SSM"]
+  B["bucket do state<br/>fiapx-tfstate-account_id<br/>criado pelo workflow, idempotente"] --> I["fiapx-infra envs/prod<br/>VPC, EKS, Aurora, S3, SQS, ECR, API GW, ALB, SSM"]
   I --> SQL["create-databases.sql<br/>Job no cluster ou passo do pipeline"]
   SQL --> AUTH["fiapx-auth<br/>migrations + lambdas + rotas /api/auth + authorizer"]
   SQL --> API["fiapx-video-api<br/>migrate + deploy + TargetGroupBinding + rotas /api/videos"]
@@ -77,7 +77,7 @@ flowchart TD
   I --> NOTIF["fiapx-notification<br/>SQS + lambda + DynamoDB<br/>publica URL da fila no SSM"]
   NOTIF --> API
   NOTIF --> AUTH
-  I --> WEB["fiapx-web<br/>build + s3 sync"]
+  I --> WEB["fiapx-web<br/>imagem nginx + rota $default<br/>+ TargetGroupBinding"]
   API --> E2E["smoke test ponta a ponta<br/>register → login → upload → COMPLETED → download"]
   PROC --> E2E
   NOTIF --> E2E

@@ -5,7 +5,7 @@
 - **Decisores:** Diego Fenille, Eduardo Santos
 - **Relacionados:** [ADR-001](ADR-001-polyrepo-e-integracao-via-ssm-parameter-store.md), [ADR-004](ADR-004-autenticacao-api-gateway-lambda-authorizer-jwt-rs256.md), [ADR-014](ADR-014-front-end-react-vite-em-s3-cloudfront-mesma-origem.md)
 
-> **Atualização ([ADR-019](ADR-019-deploy-na-aws-academy-learner-lab.md)):** o CloudFront saiu: o navegador chama o API Gateway direto, em outra origem, e o HTTP API ganhou CORS com origem igual à URL do site (o preflight `OPTIONS` é respondido antes do authorizer). O AWS Load Balancer Controller usa a `LabRole` dos nós, sem Pod Identity. VPC Link, ALB interno e `TargetGroupBinding` continuam.
+> **Atualização ([ADR-019](ADR-019-deploy-na-aws-academy-learner-lab.md)):** o CloudFront saiu: o navegador acessa o site e a API pela URL do API Gateway, na mesma origem, então a API continua sem CORS. O ALB interno ganhou um segundo target group, `fiapx-<env>-web` (pod nginx do `fiapx-web`): a regra `/api/*` vai para o video-api e o padrão do listener vai para o site; o `fiapx-web` cria a rota `$default` do HTTP API, sem authorizer, pelo mesmo VPC Link. O AWS Load Balancer Controller usa a `LabRole` dos nós, sem Pod Identity. VPC Link, ALB interno e `TargetGroupBinding` continuam.
 
 ## Contexto
 

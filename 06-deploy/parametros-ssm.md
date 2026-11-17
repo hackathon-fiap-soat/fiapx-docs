@@ -34,20 +34,21 @@ removida.
 | `notification/smtp_host` | host do provedor SMTP (`smtp-relay.brevo.com`; `mailpit` no local) | `fiapx-notification` | `fiapx-notification` (variável de ambiente da Lambda) |
 | `notification/smtp_port` | porta SMTP (`587` com STARTTLS; `1025` no Mailpit) | `fiapx-notification` | `fiapx-notification` |
 | `notification/smtp_secret_arn` | ARN do segredo `fiapx/<env>/notification/smtp` | `fiapx-notification` | `fiapx-notification` (a Lambda lê o segredo na inicialização) |
-| `apigw/api_id`, `apigw/vpc_link_id` | API Gateway e VPC Link | `fiapx-infra` | `fiapx-auth` (rotas), `fiapx-video-api` (integração) |
-| `apigw/url` | URL base do HTTP API (`https://<api_id>.execute-api.<região>.amazonaws.com`) | `fiapx-infra` | `fiapx-web` (`VITE_API_BASE_URL=<apigw/url>/api`), smoke tests dos deploys |
-| `alb/target_group_arn` | target group do ALB interno | `fiapx-infra` | `fiapx-video-api` (`TargetGroupBinding`) |
-| `alb/listener_arn` | listener do ALB interno | `fiapx-infra` | `fiapx-video-api` (integração das rotas pelo VPC Link) |
+| `apigw/api_id`, `apigw/vpc_link_id` | API Gateway e VPC Link | `fiapx-infra` | `fiapx-auth` (rotas), `fiapx-video-api` e `fiapx-web` (integração; o `fiapx-web` cria a rota `$default`) |
+| `apigw/url` | URL base do HTTP API (`https://<api_id>.execute-api.<região>.amazonaws.com`) | `fiapx-infra` | smoke tests dos deploys |
+| `alb/target_group_arn` | target group do video-api no ALB interno | `fiapx-infra` | `fiapx-video-api` (`TargetGroupBinding`) |
+| `alb/web_target_group_arn` | target group do site (`fiapx-<env>-web`, padrão do listener) | `fiapx-infra` | `fiapx-web` (`TargetGroupBinding`) |
+| `alb/listener_arn` | listener do ALB interno | `fiapx-infra` | `fiapx-video-api` e `fiapx-web` (integração das rotas pelo VPC Link) |
 | `ecr/<repo>/url` | repositório de imagens | `fiapx-infra` | `fiapx-video-api`, `fiapx-video-processor` |
-| `web/bucket` | bucket do site (S3 static website) | `fiapx-infra` | `fiapx-web` (`aws s3 sync`) |
-| `web/url` | URL do site, `http://<bucket>.s3-website-us-east-1.amazonaws.com` | `fiapx-infra` | `fiapx-infra` (CORS do API Gateway e do bucket de vídeos), `fiapx-auth` (link de redefinição), `fiapx-notification` (links dos e-mails) |
+| `ecr/fiapx-web/url` | repositório da imagem nginx do site | `fiapx-infra` | `fiapx-web` |
+| `web/url` | URL do site, que é a URL do API Gateway (`https://<api_id>.execute-api.us-east-1.amazonaws.com`) | `fiapx-infra` | `fiapx-infra` (CORS do bucket de vídeos), `fiapx-web` (smoke), `fiapx-auth` (link de redefinição), `fiapx-notification` (links dos e-mails) |
 
-As chaves de rede, EKS, API Gateway, ALB, ECR e `web/bucket` existem só em `prod`. No ambiente local, o
+As chaves de rede, EKS, API Gateway, ALB e ECR existem só em `prod`. No ambiente local, o
 init do LocalStack publica as demais, inclusive as `notification/smtp_*` apontando para o Mailpit (no
 `prod`, essas três são publicadas pelo `fiapx-notification`).
 
-Não há chaves de SES, CloudFront nem Route 53: o e-mail sai por SMTP externo e o site é um S3 static
-website ([ADR-019](../04-adrs/ADR-019-deploy-na-aws-academy-learner-lab.md)).
+Não há chaves de SES, CloudFront nem Route 53: o e-mail sai por SMTP externo e o site é um pod nginx no
+EKS, servido pela URL do API Gateway ([ADR-019](../04-adrs/ADR-019-deploy-na-aws-academy-learner-lab.md)).
 
 ## Segredos (Secrets Manager)
 

@@ -1,10 +1,12 @@
-# ADR-019 — Deploy na AWS Academy Learner Lab: credenciais do lab, LabRole, SMTP externo e site em S3 website
+# ADR-019 — Deploy na AWS Academy Learner Lab: credenciais do lab, LabRole, SMTP externo e site no EKS
 
 - **Status:** Aceito
 - **Data:** 2026-11-16
 - **Decisores:** Diego Fenille, Eduardo Santos
 - **Relacionados:** [ADR-002](ADR-002-aws-e-terraform-com-backend-s3-e-lock-nativo.md), [ADR-005](ADR-005-aurora-mysql-serverless-v2-um-database-por-servico.md), [ADR-009](ADR-009-worker-laravel-no-eks-escalado-por-keda.md), [ADR-011](ADR-011-observabilidade-com-new-relic.md), [ADR-012](ADR-012-ci-cd-com-github-actions-oidc-e-ordem-de-deploy.md), [ADR-013](ADR-013-notificacao-sqs-lambda-ses-e-historico-no-dynamodb.md), [ADR-014](ADR-014-front-end-react-vite-em-s3-cloudfront-mesma-origem.md), [ADR-015](ADR-015-remetente-de-email-dominio-proprio-e-sandbox-do-ses.md), [ADR-016](ADR-016-terraform-apply-somente-via-github-actions.md), [ADR-018](ADR-018-orquestracao-do-deploy-no-github-actions.md)
-- **Substitui:** ADR-015 por inteiro; ADR-012, ADR-013, ADR-014 e ADR-016 nos pontos listados abaixo
+- **Substitui:** ADR-015 por inteiro; ADR-005, ADR-012, ADR-013, ADR-014 e ADR-016 nos pontos listados abaixo
+- **Revisões:** 2026-11-17, depois do primeiro `apply`: Aurora provisionado (§4) e site no EKS (§6); a SCP do
+  lab também nega `s3:GetBucketObjectLockConfiguration`, então os buckets são criados pelo AWS CLI no Terraform
 
 ## Contexto
 
@@ -73,9 +75,10 @@ por um Job do `fiapx-infra` (`sql/create-databases.sql`) dentro do cluster.
 
 - Node group **on-demand** com `t3.large` (2 vCPU, 8 GiB), mínimo 2 e máximo 4 nós (8 vCPUs no teto),
   abaixo do limite de 32 vCPUs e 9 instâncias. Nada de spot.
-- Aurora MySQL 8.0 **Serverless v2** de 0,5 a 2 ACU, uma instância só (sem Multi-AZ, sem Enhanced
-  Monitoring, sem Performance Insights). Se o lab recusar `db.serverless` no primeiro `apply`, a variável
-  `aurora_instance_class = "db.t4g.medium"` troca para instância provisionada sem mudar mais nada.
+- Aurora MySQL 8.0 **provisionado `db.t3.medium`**, uma instância só (sem Multi-AZ, sem Enhanced Monitoring,
+  sem Performance Insights). O primeiro `apply` (2026-11-17) mostrou que o lab nega `rds:CreateDBInstance`
+  com `db.serverless` (política `Pvoclabs2`): o Serverless v2 do ADR-005 não é possível aqui. A classe é a
+  variável `aurora_instance_class`; numa conta própria, `db.serverless` volta a valer.
 
 ### 5. E-mail por SMTP externo (no lugar do SES)
 
@@ -91,21 +94,22 @@ por um Job do `fiapx-infra` (`sql/create-databases.sql`) dentro do cluster.
 - O resto do ADR-013 continua: SQS → Lambda → e-mail, histórico e idempotência no DynamoDB. O handler
   opcional de eventos do SES (bounces) deixa de existir; uma falha de envio vira `NotificationFailed`.
 
-### 6. Front-end em S3 static website (no lugar do CloudFront)
+### 6. Front-end como pod no EKS, atrás do mesmo API Gateway (no lugar do CloudFront)
 
-- O build do `fiapx-web` vai para o bucket `fiapx-<env>-web-<account_id>` com **website hosting** e leitura
-  pública só de objetos (`s3:GetObject`). URL: `http://<bucket>.s3-website-us-east-1.amazonaws.com`.
-  `index.html` também é o documento de erro, para o roteamento do React funcionar em qualquer caminho.
-- Site e API ficam em **origens diferentes**. Por isso:
-  - o HTTP API do API Gateway ganha **CORS** com origem igual à URL do site, métodos `GET, POST, PUT,
-    DELETE, OPTIONS` e headers `Authorization, Content-Type, X-Correlation-Id`. O preflight `OPTIONS` é
-    respondido pelo API Gateway antes do authorizer;
-  - o front usa `VITE_API_BASE_URL=<URL do API Gateway>/api`, gerado no deploy a partir do SSM;
-  - o CORS do bucket de vídeos usa a URL do site como origem (ADR-006 continua, só muda o domínio).
-- O token continua em memória + `sessionStorage` e só trafega para a API, que é HTTPS.
-- **Plano B**, só se o lab recusar a bucket policy pública no primeiro `apply`: o site passa a ser um pod
-  nginx no EKS, exposto pela rota `$default` do mesmo API Gateway (mesma origem e HTTPS). Essa troca será
-  registrada neste ADR.
+A primeira versão desta decisão era S3 static website. O primeiro `apply` (2026-11-17) mostrou que a conta
+tem **Block Public Access ligado no nível da conta**, que o lab não deixa mudar: `PutBucketPolicy` público é
+negado. Vale então o plano B que este ADR já previa:
+
+- O `fiapx-web` vira uma imagem nginx (`nginxinc/nginx-unprivileged`) com o build do Vite, no ECR
+  `fiapx-web`, com Deployment, Service e `TargetGroupBinding` no namespace `fiapx` (como o video-api).
+- O ALB interno ganha um segundo target group, `fiapx-<env>-web`: a regra `/api/*` vai para o video-api e o
+  **padrão do listener vai para o site**.
+- O `fiapx-web` cria a rota **`$default`** no HTTP API, sem authorizer, integrada ao ALB pelo VPC Link. As
+  rotas específicas (`/api/auth/*` nas Lambdas, `/api/videos*` e `/api/health/*` no ALB) têm prioridade.
+- Resultado: site e API na **mesma origem**, a URL do API Gateway (`https://<api_id>.execute-api.us-east-1.amazonaws.com`),
+  com **HTTPS**. O front usa `VITE_API_BASE_URL=/api` e a API **não precisa de CORS**, como no ADR-014.
+- `web/url` passa a ser a URL do API Gateway; o CORS do bucket de vídeos (POST de upload) usa essa origem.
+- O token continua em memória + `sessionStorage`.
 
 ### 7. Observabilidade sem Metric Streams
 
@@ -120,7 +124,7 @@ por um Job do `fiapx-infra` (`sql/create-databases.sql`) dentro do cluster.
   e cabe numa sessão de 4 h.
 - Ao fim da sessão, o lab pode **parar** as instâncias EC2 (nós do EKS); EKS, NAT, ALB e Aurora continuam
   cobrando. Por isso, ao terminar a demonstração, rodar o `destroy-all` (ADR-018).
-- Custo estimado com tudo ligado: ~US$ 10/dia (EKS ~2,40; 2× t3.large ~4,00; Aurora ~1,50; NAT ~1,10; ALB
+- Custo estimado com tudo ligado: ~US$ 10/dia (EKS ~2,40; 2× t3.large ~4,00; Aurora db.t3.medium ~2,00; NAT ~1,10; ALB
   ~0,55), abatido do crédito do lab.
 
 ## Alternativas consideradas
@@ -131,7 +135,7 @@ por um Job do `fiapx-infra` (`sql/create-databases.sql`) dentro do cluster.
 | Credenciais em GitHub Variables | Repositórios públicos: Variables aparecem em claro nos logs |
 | Notificação por SNS com assinatura de e-mail | Cada usuário precisaria confirmar uma assinatura antes; texto sem HTML |
 | Mailpit no cluster | O e-mail não chegaria ao usuário de verdade, e o requisito é notificar o usuário |
-| Front-end como pod no EKS via API Gateway | Mantém mesma origem e HTTPS, mas o time escolheu o S3 website; fica como plano B |
+| S3 static website | Era a escolha inicial do time, mas o Block Public Access da conta (que o lab não deixa mudar) impede a bucket policy pública |
 | Pedir liberação de SES/CloudFront ao Academy | Fora do controle do time e do prazo do hackathon |
 
 ## Consequências
@@ -147,7 +151,7 @@ por um Job do `fiapx-infra` (`sql/create-databases.sql`) dentro do cluster.
   políticas de menor privilégio por serviço ficam documentadas em [seguranca.md](../03-arquitetura/seguranca.md)
   como o desenho para uma conta própria, mas não são aplicadas no lab.
 - Credenciais de curta duração atualizadas à mão a cada sessão.
-- Site em HTTP (sem TLS), sujeito a adulteração no caminho; aceito para a demonstração acadêmica.
-- CORS e preflight nas chamadas à API, que a mesma origem evitava.
+- O site passa a ocupar CPU e memória do cluster (um pod nginx pequeno) e depende do EKS no ar.
+- Aurora com instância fixa (`db.t3.medium`, ~US$ 2/dia), sem a escala por ACU do Serverless v2.
 - Dependência de um provedor SMTP externo e da reputação dele (e-mails podem cair em spam).
 - Sem métricas dos serviços gerenciados no New Relic; elas ficam no CloudWatch.

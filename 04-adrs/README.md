@@ -23,4 +23,4 @@ Cada ADR traz Contexto, Decisão, Alternativas consideradas e Consequências; de
 | 016 | [`terraform apply` somente via GitHub Actions; apply local apenas para testes (§11.5)](ADR-016-terraform-apply-somente-via-github-actions.md) | Aceito, parcialmente substituído por [ADR-019](ADR-019-deploy-na-aws-academy-learner-lab.md) | 2026-11-16 |
 | 017 | [Recuperação e troca de senha no `fiapx-auth`, com e-mail pelo `fiapx-notification`](ADR-017-recuperacao-e-troca-de-senha.md) | Aceito | 2026-11-16 |
 | 018 | [Orquestração do deploy do ambiente inteiro no GitHub Actions (`fiapx-infra`)](ADR-018-orquestracao-do-deploy-no-github-actions.md) | Aceito | 2026-11-16 |
-| 019 | [Deploy na AWS Academy Learner Lab: credenciais do lab, LabRole, SMTP externo e site em S3 website](ADR-019-deploy-na-aws-academy-learner-lab.md) | Aceito | 2026-11-16 |
+| 019 | [Deploy na AWS Academy Learner Lab: credenciais do lab, LabRole, SMTP externo e site no EKS](ADR-019-deploy-na-aws-academy-learner-lab.md) | Aceito | 2026-11-16 |

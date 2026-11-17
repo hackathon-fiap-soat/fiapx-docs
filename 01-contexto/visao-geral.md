@@ -33,7 +33,7 @@ aplicando arquitetura de software, microsserviços, mensageria, qualidade e CI/C
 | ID | Requisito | Como atendemos |
 |---|---|---|
 | RT1 | Persistência dos dados | Aurora MySQL (dados relacionais), DynamoDB (histórico de notificações) e S3 (arquivos) |
-| RT2 | Arquitetura escalável | EKS + HPA (API) + KEDA (worker) + serviços gerenciados (SQS, S3, Aurora Serverless v2, Lambda) |
+| RT2 | Arquitetura escalável | EKS + HPA (API) + KEDA (worker) + serviços gerenciados (SQS, S3, Aurora, Lambda) |
 | RT3 | Versionamento no GitHub | Sete repositórios na organização [`hackathon-fiap-soat`](https://github.com/hackathon-fiap-soat) |
 | RT4 | Testes que garantam a qualidade | Cobertura ≥ 80% por repositório, BDD da SAGA, contract tests e SonarCloud no CI |
 | RT5 | CI/CD | GitHub Actions por repositório, credenciais da AWS Academy Learner Lab em GitHub Secrets e deploy automático na `main` |
@@ -89,7 +89,7 @@ assíncrona, por filas SQS com contratos JSON versionados.
 | `fiapx-video-api` | Gestão de vídeos e orquestração da SAGA de processamento |
 | `fiapx-video-processor` | Extração dos frames e geração do zip |
 | `fiapx-notification` | Envio de e-mails e histórico de notificações |
-| `fiapx-web` | Front-end |
+| `fiapx-web` | Front-end (pod nginx no EKS, servido pela URL do API Gateway) |
 
 Detalhes: [C4 de contexto](../03-arquitetura/c4-contexto.md),
 [containers](../03-arquitetura/c4-containers.md) e [SAGA](../03-arquitetura/saga.md).

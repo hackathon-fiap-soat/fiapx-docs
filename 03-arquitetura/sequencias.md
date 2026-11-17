@@ -14,8 +14,6 @@ sequenceDiagram
   participant SM as Secrets Manager
   participant DB as Aurora fiapx_auth
 
-  U->>GW: OPTIONS /api/auth/register (preflight CORS, o site está em outra origem)
-  GW-->>U: 204 com Access-Control-Allow-Origin = URL do site (antes do authorizer)
   U->>GW: POST /api/auth/register {name, email, password}
   GW->>REG: invoca (sem authorizer)
   REG->>REG: valida e-mail e senha (mín. 8), bcrypt custo 12

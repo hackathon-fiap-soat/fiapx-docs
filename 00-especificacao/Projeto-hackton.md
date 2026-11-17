@@ -70,7 +70,7 @@ DDD + Clean Architecture, microsserviços, mensageria, SAGA, testes, CI/CD e obs
 | ID | Requisito | Como atendemos |
 |---|---|---|
 | RT1 | Persistir os dados | Aurora MySQL (dados) + S3 (arquivos) |
-| RT2 | Arquitetura escalável | EKS + HPA (API) + KEDA (worker) + serviços gerenciados (SQS, S3, Aurora Serverless v2, Lambda) |
+| RT2 | Arquitetura escalável | EKS + HPA (API) + KEDA (worker) + serviços gerenciados (SQS, S3, Aurora, Lambda) |
 | RT3 | Versionado no GitHub | Um repositório por serviço (§4) |
 | RT4 | Testes que garantam a qualidade | Cobertura ≥ 80% por repositório, BDD da SAGA, SonarCloud com Quality Gate no CI |
 | RT5 | CI/CD | GitHub Actions por repositório, autenticação na AWS com as credenciais do lab em GitHub Secrets, deploy automático na `main` |
@@ -93,14 +93,14 @@ DDD + Clean Architecture, microsserviços, mensageria, SAGA, testes, CI/CD e obs
 | Autenticação | **API Gateway (HTTP API) + Lambda em Node.js** (runtime Node.js 24). Usuários em banco próprio no Aurora, senha com bcrypt, **JWT RS256** |
 | Aplicação principal | **PHP 8.4.27 + Laravel 13**, em **Docker** no **EKS** (Kubernetes) |
 | Worker de processamento | **PHP 8.4.27 + Laravel 13** em repositório próprio, no EKS, com `ffmpeg` na imagem, escalado por **KEDA** pela fila |
-| Banco | **Aurora MySQL** (v3, compatível com MySQL 8.0), Serverless v2 de 0,5 a 2 ACU (alternativa `db.t4g.medium` se o lab recusar `db.serverless`). **Um database por serviço** no mesmo cluster |
+| Banco | **Aurora MySQL** (v3, compatível com MySQL 8.0), provisionado `db.t3.medium`, uma instância (o lab nega `db.serverless`, ADR-019). **Um database por serviço** no mesmo cluster |
 | Arquivos | **Amazon S3** (vídeos e zips) |
 | Fila | **Amazon SQS** (todo o processamento passa pela fila) + DLQ |
 | Arquitetura de código | **DDD + Clean Architecture** |
 | Processamento | **SAGA orquestrada pela aplicação principal** (Laravel), com estado da saga no Aurora e comandos e respostas via SQS |
 | Observabilidade | **New Relic** (APM PHP, Kubernetes, Lambda, logs e alertas) + **CloudWatch** para os serviços gerenciados (SQS, DLQs, Aurora, API Gateway), com alarmes num tópico SNS com e-mail do time |
 | Notificação | **SQS → Lambda Node.js → SMTP externo** (Nodemailer; provedor **Brevo** por padrão, Mailpit no local), com registro de cada envio em **DynamoDB** (partition key = `email`), em repositório próprio |
-| Front-end | SPA mínima **React + Vite + TypeScript + Tailwind**, hospedada em **S3 static website** (HTTP), em repositório próprio; a API fica em outra origem (API Gateway com CORS) |
+| Front-end | SPA mínima **React + Vite + TypeScript + Tailwind**, servida por um pod **nginx** no EKS, em repositório próprio, na **mesma origem** da API: a URL (HTTPS) do API Gateway, cuja rota `$default` leva ao site (ADR-019) |
 | Repositórios | Organização GitHub **[hackathon-fiap-soat](https://github.com/hackathon-fiap-soat)** |
 | CI/CD | **GitHub Actions** com as credenciais temporárias da sessão do lab em **GitHub Secrets** (`AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_SESSION_TOKEN`), atualizadas a cada sessão. `terraform apply` **só via GitHub Actions**, sem exceção; apply local só no LocalStack (§11.5) |
 | Documentação | **Primeiro**: Domain Storytelling, ADRs, RFCs, fluxo de deploy, C4, sequência, contratos |
@@ -121,15 +121,17 @@ DDD + Clean Architecture, microsserviços, mensageria, SAGA, testes, CI/CD e obs
 6. **Uma imagem/pod processa um vídeo por vez.** A concorrência vem do número de pods (KEDA). Durante o
    `ffmpeg`, o worker estende o visibility timeout da mensagem (heartbeat).
 7. **UUID v7** gerado no domínio (`ramsey/uuid`, que é biblioteca e não framework) para todas as entidades.
-8. **Site e API em origens diferentes** (ADR-019, o lab nega o CloudFront): o front-end é um S3 static
-   website (`http://<bucket>.s3-website-us-east-1.amazonaws.com`) e chama o API Gateway direto, com
-   `VITE_API_BASE_URL=<URL do API Gateway>/api`. O HTTP API tem **CORS** com origem igual à URL do site,
-   métodos `GET, POST, PUT, DELETE, OPTIONS` e headers `Authorization, Content-Type, X-Correlation-Id`; o
-   preflight `OPTIONS` é respondido antes do authorizer. O bucket de vídeos tem CORS para o `POST` de upload
-   com a mesma origem. **Todas as rotas públicas ficam sob o prefixo `/api`**: `/api/auth/register`,
+8. **Site e API na mesma origem, pelo API Gateway** (ADR-019, o lab nega o CloudFront e o Block Public Access
+   da conta impede bucket público): o front-end é uma imagem nginx (`nginxinc/nginx-unprivileged`) com o
+   build do Vite, no ECR `fiapx-web`, com Deployment, Service e `TargetGroupBinding` no namespace `fiapx`. O
+   ALB interno tem um 2º target group, `fiapx-<env>-web`: a regra `/api/*` vai para o video-api e o padrão do
+   listener vai para o site. O `fiapx-web` cria a rota `$default` do HTTP API (sem authorizer), integrada ao
+   ALB pelo VPC Link; as rotas específicas têm prioridade. O usuário acessa tudo pela URL do API Gateway
+   (`https://<api_id>.execute-api.us-east-1.amazonaws.com`), com HTTPS, e o front usa
+   `VITE_API_BASE_URL=/api`: **sem CORS na API**. O bucket de vídeos tem CORS para o `POST` de upload com
+   essa origem. **Todas as rotas públicas ficam sob o prefixo `/api`**: `/api/auth/register`,
    `/api/auth/login`, `/api/videos`... No Laravel, isso é o prefixo padrão de `routes/api.php`.
-   **Neste documento, toda rota pública é escrita com o prefixo `/api`.** Plano B, se o lab recusar a
-   bucket policy pública: o site vira um pod nginx no EKS, exposto pela rota `$default` do mesmo API Gateway.
+   **Neste documento, toda rota pública é escrita com o prefixo `/api`.**
 9. **`LabRole` para toda identidade** (ADR-019): cluster EKS, nós, pods (credenciais dos nós pelo IMDS, sem
    Pod Identity), KEDA (`identityOwner: keda`), AWS Load Balancer Controller e Lambdas. O Terraform lê a role
    com `data "aws_iam_role"` e não cria nenhuma. As políticas de menor privilégio por serviço ficam
@@ -145,12 +147,12 @@ obrigatório (aprovação opcional), checks obrigatórios (testes + Sonar) e ace
 | # | Repositório | Responsabilidade | Stack |
 |---|---|---|---|
 | 1 | `fiapx-docs` | Toda a documentação: Domain Storytelling, C4, sequência, ADRs, RFCs, fluxo de deploy, contratos de mensagens (JSON Schema), OpenAPI consolidado, documento de entrega | Markdown + Mermaid + JSON Schema |
-| 2 | `fiapx-infra` | VPC, EKS (com add-ons), Aurora, S3 (vídeos e site), SQS/DLQ, ECR, API Gateway + VPC Link + ALB interno, Secrets, SSM outputs, orquestrador de deploy, ambiente local (docker-compose + LocalStack) | Terraform + Helm |
+| 2 | `fiapx-infra` | VPC, EKS (com add-ons), Aurora, S3 (vídeos), SQS/DLQ, ECR (inclui o do site), API Gateway + VPC Link + ALB interno, Secrets, SSM outputs, orquestrador de deploy, ambiente local (docker-compose + LocalStack) | Terraform + Helm |
 | 3 | `fiapx-auth` | Lambdas de **register**, **login**, **password** (recuperação e troca de senha) e **authorizer**, rotas `/api/auth/*` no API Gateway, schema `fiapx_auth` | Node.js 24 + Terraform |
 | 4 | `fiapx-video-api` | Aplicação principal: gestão de vídeos, URLs pré-assinadas, listagem de status, download, **orquestrador da SAGA**, outbox, consumidores de eventos/respostas, schema `fiapx_video`, rotas `/api/videos*` (`infra/`) | PHP 8.4.27 + Laravel 13 + Docker + manifests K8s + Terraform |
 | 5 | `fiapx-video-processor` | Worker: consome `ProcessVideo`/`CleanupArtifacts`, baixa o vídeo, `ffmpeg` → frames → zip → S3, responde à SAGA | PHP 8.4.27 + Laravel 13 + ffmpeg + Docker + manifests K8s + KEDA |
 | 6 | `fiapx-notification` | Fila SQS própria → Lambda que envia e-mail por SMTP (Brevo) e registra cada envio no DynamoDB (chave = e-mail); responde à SAGA | Node.js 24 + Nodemailer + DynamoDB + Terraform |
-| 7 | `fiapx-web` | Front-end mínimo: cadastro, login, upload (múltiplos vídeos), lista de status e download. Prompt de layout em [`Prompt-layout-web.md`](Prompt-layout-web.md) | React + Vite + TypeScript + Tailwind, S3 static website |
+| 7 | `fiapx-web` | Front-end mínimo: cadastro, login, upload (múltiplos vídeos), lista de status e download. Prompt de layout em [`Prompt-layout-web.md`](Prompt-layout-web.md) | React + Vite + TypeScript + Tailwind, nginx no EKS + Terraform (rota `$default`) |
 
 > Os manifests Kubernetes ficam **no repositório de cada serviço** (`k8s/`). O `fiapx-infra` cria só o cluster e
 > os add-ons compartilhados.
@@ -163,8 +165,7 @@ obrigatório (aprovação opcional), checks obrigatórios (testes + Sonar) e ace
 
 ```mermaid
 flowchart LR
-  U[Usuário / navegador] -->|HTTP| WEB[(S3 static website<br/>fiapx-web)]
-  U -->|HTTPS /api/* com CORS| APIGW[API Gateway HTTP API]
+  U[Usuário / navegador] -->|HTTPS site e /api/*| APIGW[API Gateway HTTP API]
   U -->|POST pré-assinado| S3[(S3 fiapx-videos)]
 
   subgraph Auth[fiapx-auth]
@@ -175,16 +176,18 @@ flowchart LR
 
   APIGW -->|/api/auth/*| LREG & LLOGIN
   APIGW -. valida JWT .-> LAUTHZ
-  APIGW -->|/api/videos/* via VPC Link| ALB[ALB interno]
+  APIGW -->|/api/videos/* e $default via VPC Link| ALB[ALB interno]
 
   subgraph EKS[Amazon EKS]
     API[video-api<br/>Laravel 13]
     RELAY[outbox-relay]
     CONS[saga-consumer]
     WRK[video-processor<br/>Laravel 13 + ffmpeg<br/>KEDA 1..10]
+    WEB[fiapx-web<br/>nginx + build do Vite]
   end
 
-  ALB --> API
+  ALB -->|/api/*| API
+  ALB -->|padrão| WEB
   LREG & LLOGIN --> AURORA_AUTH[(Aurora MySQL<br/>fiapx_auth)]
   API & RELAY & CONS --> AURORA_VIDEO[(Aurora MySQL<br/>fiapx_video)]
 
@@ -470,7 +473,7 @@ Frames, Pacote zip, Link de download, E-mail.
 | 016 | `terraform apply` somente via GitHub Actions; apply local apenas para testes (§11.5) |
 | 017 | Recuperação e troca de senha no `fiapx-auth`, com e-mail pelo `fiapx-notification` |
 | 018 | Orquestração do deploy no GitHub Actions: `deploy-all.yml` e `destroy-all.yml` no `fiapx-infra`, chamando o `deploy.yml` reutilizável de cada repositório |
-| 019 | Deploy na AWS Academy Learner Lab: credenciais do lab em GitHub Secrets, `LabRole`, SMTP externo e site em S3 static website (substitui o ADR-015 e partes dos ADRs 002, 005, 009–014 e 016) |
+| 019 | Deploy na AWS Academy Learner Lab: credenciais do lab em GitHub Secrets, `LabRole`, SMTP externo e site no EKS atrás do mesmo API Gateway (substitui o ADR-015 e partes dos ADRs 002, 005, 009–014 e 016) |
 
 **RFCs obrigatórias** (`05-rfcs/RFC-NNN-titulo.md`, cada uma com alternativas comparadas em tabela):
 
@@ -498,15 +501,15 @@ fiapx-infra/
 │   ├── network/          # VPC, subnets, NAT, VPC endpoints
 │   ├── eks/              # cluster e managed node group on-demand t3.large (2–4) com a LabRole; launch template com hop limit 2 (IMDS)
 │   ├── eks-addons/       # Helm: aws-load-balancer-controller, metrics-server, keda, newrelic nri-bundle
-│   ├── aurora/           # Aurora MySQL Serverless v2 (0,5–2 ACU; aurora_instance_class = db.t4g.medium como alternativa), subnet group, SG, secret do master, databases
-│   ├── storage/          # bucket S3, CORS, lifecycle, notificação ObjectCreated → SQS (prefixo uploads/)
+│   ├── aurora/           # Aurora MySQL provisionado db.t3.medium, uma instância (aurora_instance_class), subnet group, SG, secret do master, databases
+│   ├── storage/          # bucket S3 (módulo s3-bucket, criado pelo AWS CLI), CORS do POST de upload, lifecycle, notificação ObjectCreated → SQS (prefixo uploads/)
 │   ├── messaging/        # 3 filas compartilhadas (video-uploaded, processing-commands, saga-replies) + DLQs
 │   │                     #   + alarmes do CloudWatch e tópico SNS com e-mail do time
 │   │                     #   (a notification-commands é do repositório fiapx-notification, ver §8.6)
-│   ├── ecr/              # fiapx-video-api, fiapx-video-processor (scan on push, lifecycle)
-│   ├── edge/             # API Gateway HTTP API (CORS com a URL do site), stage, VPC Link, ALB interno, Target Group, logs de acesso
-│   ├── web-hosting/      # bucket fiapx-<env>-web-<account_id> com S3 static website (HTTP, GetObject público,
-│   │                     #   index.html também como erro); a URL do site alimenta o CORS do API Gateway e do bucket de vídeos
+│   ├── ecr/              # fiapx-video-api, fiapx-video-processor, fiapx-web (scan on push, lifecycle)
+│   ├── edge/             # API Gateway HTTP API, stage, VPC Link, ALB interno, target groups do video-api e do site
+│   │                     #   (fiapx-<env>-web, padrão do listener), logs de acesso; o ALB e o ECR atendem o site
+│   ├── s3-bucket/        # bucket criado e apagado pelo AWS CLI (a SCP do lab nega s3:GetBucketObjectLockConfiguration)
 │   └── ssm-outputs/      # publica tudo em /fiapx/<env>/...
 ├── envs/prod/            # main.tf, backend.tf (bucket passado no init), variables.tf, terraform.tfvars.example
 ├── local/
@@ -518,12 +521,15 @@ fiapx-infra/
 
 Sem `bootstrap/` e sem módulo `ses/` (ADR-019): o bucket do state `fiapx-tfstate-<account_id>` é garantido
 pelo primeiro passo de todo job Terraform, nenhuma role é criada (tudo usa a `LabRole`) e o e-mail sai por
-SMTP externo, configurado pelo `fiapx-notification`.
+SMTP externo, configurado pelo `fiapx-notification`. Não há bucket do site: o site é um pod nginx no EKS,
+atrás do ALB e do API Gateway. A SCP do lab nega `s3:GetBucketObjectLockConfiguration`; os buckets são criados
+e apagados pelo AWS CLI dentro do Terraform (módulo `s3-bucket`) e as configurações seguem em recursos
+`aws_s3_bucket_*`.
 
 Parâmetros SSM publicados (exemplos): `/fiapx/prod/vpc/private_subnet_ids`, `/eks/cluster_name`,
 `/aurora/endpoint`, `/aurora/secret_arn`, `/s3/videos_bucket`, `/sqs/<fila>/url`, `/sqs/<fila>/arn`,
-`/apigw/api_id`, `/apigw/vpc_link_id`, `/apigw/url`, `/alb/target_group_arn`, `/ecr/<repo>/url`,
-`/web/bucket`, `/web/url` (URL do S3 static website).
+`/apigw/api_id`, `/apigw/vpc_link_id`, `/apigw/url`, `/alb/target_group_arn`, `/alb/web_target_group_arn`,
+`/ecr/<repo>/url` (inclui `/ecr/fiapx-web/url`), `/web/url` (URL do API Gateway, que também serve o site).
 Publicados pelo `fiapx-notification`: `/fiapx/prod/sqs/notification-commands/url` (lido pelo `video-api` e
 pelo `fiapx-auth`) e `/fiapx/prod/notification/smtp_host`, `/smtp_port` e `/smtp_secret_arn`.
 Catálogo completo (chaves, segredos, quem publica e quem lê): `fiapx-docs/06-deploy/parametros-ssm.md`.
@@ -771,22 +777,26 @@ Academy Learner Lab). O ADR-015 (domínio `hackfiapf5.click` no Route 53 e sandb
 - Telas: **Cadastro**, **Login**, **Meus vídeos** (upload múltiplo com barra de progresso + tabela de
   status com atualização automática), **Download** do zip, **Recuperar senha** (`/recuperar-senha`),
   **Criar nova senha** (`/redefinir-senha?token=`) e **Trocar senha** logado (`/conta/senha`) (ADR-017).
-- `VITE_API_BASE_URL=<URL do API Gateway>/api`, gerado no deploy a partir do SSM (`/fiapx/<env>/apigw/url`).
-  Site e API ficam em origens diferentes (CORS no API Gateway, ADR-019). O token fica em memória +
+- `VITE_API_BASE_URL=/api`: site e API ficam na mesma origem, a URL do API Gateway (ADR-019), sem CORS na
+  API. O token fica em memória +
   `sessionStorage` e só trafega para a API (HTTPS); 401 ou 403 → volta para o login.
 - Upload: `POST /api/videos` → `POST` multipart no S3 com os `fields` recebidos (o arquivo deve ser o
   **último** campo), com progresso via `XMLHttpRequest` (o `fetch` não informa progresso de upload).
 - Modo **mock** (MSW) para desenvolver e demonstrar o layout sem back-end.
 - Testes: Vitest + Testing Library (cobertura ≥ 80%) e um teste E2E com Playwright (login → upload → status).
-- Deploy: `npm run build` → `aws s3 sync dist/` para o bucket `/web/bucket` (S3 static website, sem cache
-  para invalidar). O bucket é criado pelo `fiapx-infra` (módulo `web-hosting`), e a URL do site fica em
-  `/fiapx/<env>/web/url`.
+- Hospedagem: imagem nginx (`nginxinc/nginx-unprivileged`) com o build do Vite, no ECR `fiapx-web`
+  (`/fiapx/<env>/ecr/fiapx-web/url`), com Deployment, Service e `TargetGroupBinding` (target group
+  `/fiapx/<env>/alb/web_target_group_arn`) no namespace `fiapx`; o `infra/` do repositório cria a rota
+  `$default` do HTTP API, sem authorizer, integrada ao ALB pelo VPC Link.
+- Deploy: build da imagem com `VITE_API_BASE_URL=/api` → push no ECR → `terraform apply` do `infra/` (rota
+  `$default`) → `kubectl apply -k` → `rollout status` → smoke com Playwright na URL do API Gateway
+  (`/fiapx/<env>/web/url`).
 
 ---
 
 ## 9. Banco de dados
 
-Um cluster **Aurora MySQL Serverless v2** (mín. 0,5 ACU; máx. 2 ACU; uma instância, sem Multi-AZ no lab), com **databases e usuários
+Um cluster **Aurora MySQL** provisionado (`db.t3.medium`, uma instância, sem Multi-AZ no lab; ADR-019), com **databases e usuários
 separados por serviço**. Nenhum serviço acessa o database de outro.
 
 ### 9.1 `fiapx_auth` (dono: `fiapx-auth`)
@@ -942,7 +952,7 @@ por 10 min e erro 5xx no API Gateway > 2%.
 | `fiapx-docs` | markdownlint, validação dos JSON Schemas, lint do OpenAPI (Spectral) | publica (GitHub Pages opcional) |
 | `fiapx-infra` | `fmt -check`, `validate`, `tflint`, `checkov`, `plan` comentado no PR | `apply` (environment `prod`) |
 | `fiapx-auth` / `fiapx-notification` | eslint, jest (cov ≥ 80%), Sonar, `terraform plan` | build do zip → `terraform apply` → (auth) invoca a Lambda `migrate` → smoke test (`/api/auth/login`; na notification, um `SendNotification` de teste para um e-mail do time e conferência do item `SENT` no DynamoDB) |
-| `fiapx-web` | eslint, vitest (cov ≥ 80%), Sonar, build | build com `VITE_API_BASE_URL=<apigw/url>/api` (SSM) → `s3 sync` para o S3 static website → Playwright smoke na URL do site |
+| `fiapx-web` | eslint, vitest (cov ≥ 80%), Sonar, build | build da imagem nginx com `VITE_API_BASE_URL=/api` → push no ECR → `terraform apply` do `infra/` (rota `$default`) → `kubectl apply -k` → `rollout status` → Playwright smoke na URL do API Gateway |
 | `fiapx-video-api` | pint, phpstan (nível 6+), phpunit (cov ≥ 80%, com MySQL e LocalStack do `fiapx-infra/local`), behat (SAGA), Sonar, build + Trivy, kustomize + kubeconform, `terraform plan` do `infra/` | push no ECR → `terraform apply` do `infra/` (rotas) → `aws.env` e Secrets → manifests sem os Deployments → Job `migrate` → Deployments → `rollout status` → smoke test (`/api/health/ready` via gateway) |
 | `fiapx-video-processor` | pint, phpstan, phpunit (inclui integração com `ffmpeg` real e um vídeo de 3 s em `tests/fixtures`), Sonar, build + Trivy | push no ECR → `kustomize edit set image` → `kubectl apply -k` → `rollout status` |
 
@@ -950,7 +960,7 @@ por 10 min e erro 5xx no API Gateway > 2%.
 
 ```mermaid
 flowchart TD
-  B[bucket do state<br/>fiapx-tfstate-account_id<br/>criado pelo workflow] --> I[fiapx-infra envs/prod<br/>VPC, EKS, Aurora, S3, SQS, ECR, API GW, site, SSM]
+  B[bucket do state<br/>fiapx-tfstate-account_id<br/>criado pelo workflow] --> I[fiapx-infra envs/prod<br/>VPC, EKS, Aurora, S3, SQS, ECR, API GW, ALB, SSM]
   I --> SQL[create-databases.sql<br/>Job no cluster ou passo do pipeline]
   SQL --> AUTH[fiapx-auth<br/>migrations + lambdas + rotas /auth + authorizer]
   SQL --> API[fiapx-video-api<br/>migrate + deploy + TargetGroupBinding + rotas /api/videos]
@@ -959,7 +969,7 @@ flowchart TD
   I --> NOTIF[fiapx-notification<br/>SQS + lambda + DynamoDB<br/>publica URL da fila no SSM]
   NOTIF --> API
   NOTIF --> AUTH
-  I --> WEB[fiapx-web<br/>build + s3 sync]
+  I --> WEB[fiapx-web<br/>imagem nginx + rota $default + TargetGroupBinding]
   API --> E2E[smoke test ponta a ponta<br/>register → login → upload → COMPLETED → download]
   PROC --> E2E
   NOTIF --> E2E
@@ -1078,9 +1088,9 @@ antes de continuar.
 - O `apply` acontece **pelo GitHub Actions** ao fazer merge (§11.5). O agente **não faz merge** desse PR:
   o time revisa o `plan` e faz o merge (gera custo).
 - Antes do merge, pedir ao time para iniciar a sessão do lab e atualizar os Secrets `AWS_*`, e conferir os
-  Secrets `SMTP_*` do `fiapx-notification`. No primeiro `apply`, conferir se o lab aceita `db.serverless` e a
-  bucket policy pública do site; se não, aplicar as alternativas do ADR-019 (`db.t4g.medium`; site no EKS
-  pela rota `$default`). Depois do apply, confirmar a assinatura SNS dos alarmes.
+  Secrets `SMTP_*` do `fiapx-notification`. O Aurora é `db.t3.medium` e o site roda no EKS pela rota
+  `$default` (ADR-019, revisado depois do primeiro `apply`). Depois do apply, confirmar a assinatura SNS dos
+  alarmes.
 - **DoD:** `apply` do CI OK e parâmetros SSM publicados.
 
 ### Etapa 8 — CI/CD
@@ -1152,7 +1162,7 @@ antes de continuar.
 ### Código e infra
 
 - [ ] 7 repositórios em <https://github.com/hackathon-fiap-soat> com README (propósito, stack, como rodar, diagrama, links)
-- [ ] Front-end publicado no S3 static website (link no PDF de entrega)
+- [ ] Front-end publicado na URL do API Gateway (link no PDF de entrega)
 - [ ] Remetente verificado no provedor SMTP (Brevo) e histórico de envios no DynamoDB
 - [ ] `main` protegida + PR obrigatório + checks
 - [ ] Cobertura ≥ 80% em cada serviço + BDD da SAGA + SonarCloud aprovado

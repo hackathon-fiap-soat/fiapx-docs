@@ -7,8 +7,7 @@ usuário e o processamento assíncrono coordenado pela SAGA.
 
 ```mermaid
 flowchart LR
-  U["Usuário<br/>navegador"] -->|"HTTP"| WEB[("S3 static website<br/>fiapx-web")]
-  U -->|"HTTPS /api/*<br/>CORS"| APIGW["API Gateway<br/>HTTP API"]
+  U["Usuário<br/>navegador"] -->|"HTTPS<br/>site e /api/*"| APIGW["API Gateway<br/>HTTP API"]
   U -->|"POST pré-assinado<br/>(upload direto)"| S3[("S3<br/>fiapx-videos")]
 
   subgraph Auth["fiapx-auth"]
@@ -23,8 +22,9 @@ flowchart LR
   LREG & LLOGIN & LPASS --> AURORA_AUTH[("Aurora<br/>fiapx_auth")]
   LPASS -->|"SendNotification<br/>PASSWORD_RESET"| Q_NOTIF[["SQS<br/>notification-commands"]]
 
-  APIGW -->|"/api/videos/*<br/>VPC Link"| ALB["ALB interno"]
-  ALB --> API["video-api-web<br/>Laravel 13 no EKS"]
+  APIGW -->|"/api/videos/* e $default<br/>VPC Link"| ALB["ALB interno"]
+  ALB -->|"/api/*"| API["video-api-web<br/>Laravel 13 no EKS"]
+  ALB -->|"padrão"| WEB["fiapx-web<br/>nginx no EKS"]
   API --> AURORA_VIDEO[("Aurora<br/>fiapx_video")]
   API -->|"presign POST e GET"| S3
 ```
@@ -66,17 +66,17 @@ containers enviam APM, logs e métricas ao New Relic (omitido no diagrama para n
 
 | Container | Tecnologia | Repositório | Responsabilidade |
 |---|---|---|---|
-| Site | S3 static website (HTTP, leitura pública só de objetos), bucket criado pelo `fiapx-infra` | `fiapx-web` | Arquivos estáticos do React; `index.html` também é o documento de erro |
-| API Gateway | HTTP API | `fiapx-infra` + rotas em `fiapx-auth` | Roteamento, CORS (origem = URL do site), authorizer, rate limit, logs de acesso |
+| Site | nginx (`nginxinc/nginx-unprivileged`) com o build do Vite, no EKS, atrás do target group `fiapx-<env>-web` | `fiapx-web` | Arquivos estáticos do React, com fallback para `index.html` nas rotas da SPA |
+| API Gateway | HTTP API | `fiapx-infra` + rotas em `fiapx-auth`, `fiapx-video-api` e `fiapx-web` (`$default`) | Roteamento, authorizer, rate limit, logs de acesso; a rota `$default` leva ao site |
 | Lambdas `register`, `login`, `password`, `authorizer` | Node.js 24 | `fiapx-auth` | Cadastro, login (JWT RS256), recuperação e troca de senha, validação do token |
-| ALB interno + VPC Link | AWS ALB | `fiapx-infra` | Leva o tráfego do API Gateway para dentro do EKS |
+| ALB interno + VPC Link | AWS ALB | `fiapx-infra` | Leva o tráfego do API Gateway para dentro do EKS: `/api/*` → video-api, padrão → site |
 | `video-api-web` | PHP 8.4.27 + Laravel 13 | `fiapx-video-api` | Endpoints `/api/videos*` e `/api/health/*` |
 | `outbox-relay` | mesma imagem, `php artisan outbox:relay` | `fiapx-video-api` | Publica nas filas os comandos gravados na outbox |
 | `saga-consumer` | mesma imagem, `php artisan saga:consume` | `fiapx-video-api` | Consome `video-uploaded` e `saga-replies.fifo` e avança a SAGA |
 | CronJob | mesma imagem, `php artisan schedule:run` | `fiapx-video-api` | Timeouts da SAGA e expiração de uploads pendentes |
 | `video-processor` | PHP 8.4.27 + Laravel 13 + ffmpeg | `fiapx-video-processor` | Extrai os frames, gera o zip e responde à SAGA |
 | Lambda `notification` | Node.js 24 | `fiapx-notification` | Envia e-mails por SMTP (Nodemailer, provedor Brevo) e registra o histórico no DynamoDB |
-| Aurora MySQL Serverless v2 | MySQL 8.0 | `fiapx-infra` | Databases `fiapx_auth` e `fiapx_video`, um usuário por serviço |
+| Aurora MySQL (`db.t3.medium`, uma instância) | MySQL 8.0 | `fiapx-infra` | Databases `fiapx_auth` e `fiapx_video`, um usuário por serviço |
 | DynamoDB `notifications` | NoSQL | `fiapx-notification` | Histórico e idempotência dos e-mails |
 | S3 `fiapx-videos` | S3 | `fiapx-infra` | Vídeos (`uploads/`, 7 dias) e zips (`results/`, 30 dias) |
 | Filas SQS | SQS Standard e FIFO | `fiapx-infra` e `fiapx-notification` | Comandos, eventos e respostas da SAGA |
@@ -92,9 +92,9 @@ containers enviam APM, logs e métricas ao New Relic (omitido no diagrama para n
 
 ## Comunicação
 
-- **Síncrona:** só entre navegador, site no S3, API Gateway, Lambdas de auth e `video-api-web`. Site e API
-  ficam em origens diferentes, então o navegador faz preflight CORS, respondido pelo API Gateway antes do
-  authorizer ([ADR-019](../04-adrs/ADR-019-deploy-na-aws-academy-learner-lab.md)).
+- **Síncrona:** só entre navegador, API Gateway, Lambdas de auth, `video-api-web` e o pod do site. Site e API
+  ficam na mesma origem, a URL do API Gateway, então não há CORS na API
+  ([ADR-019](../04-adrs/ADR-019-deploy-na-aws-academy-learner-lab.md)).
 - **Assíncrona:** todo o processamento passa por SQS. Os serviços não chamam uns aos outros por HTTP.
 - **Integração entre repositórios:** cada repositório lê do SSM Parameter Store (`/fiapx/<env>/...`) os
   recursos criados por outro, como URLs de filas e o nome do bucket.

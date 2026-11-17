@@ -16,7 +16,7 @@
 |---|---|
 | Vídeo de apresentação (até 10 min) | a preencher |
 | Documentação da arquitetura | <https://github.com/hackathon-fiap-soat/fiapx-docs> |
-| Front-end publicado | a preencher (URL do S3 static website) |
+| Front-end publicado | a preencher (URL do API Gateway, que serve o site e a API) |
 | Organização no GitHub | <https://github.com/hackathon-fiap-soat> |
 
 ## Repositórios
@@ -47,7 +47,8 @@ solução distribuída na AWS, implantada numa conta da AWS Academy Learner Lab
 - Em caso de falha, a saga compensa os passos anteriores e envia um e-mail ao usuário por SMTP (Brevo).
 - Cadastro e login ficam em Lambdas Node.js atrás do API Gateway, com JWT RS256 validado por um
   Lambda Authorizer.
-- O front-end React é um site estático no S3 (static website) que chama o API Gateway com CORS.
+- O front-end React é servido por um pod nginx no EKS, na mesma origem da API: a URL do API Gateway (rota
+  `$default` → ALB interno → site), sem CORS na API.
 
 ## Requisitos atendidos
 

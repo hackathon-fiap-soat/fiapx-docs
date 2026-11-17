@@ -11,13 +11,13 @@
 
 | Componente | Como escala | Limites |
 |---|---|---|
-| S3 (vídeos e site), API Gateway, SQS, DynamoDB | Gerenciados pela AWS, sem configuração de capacidade | Limites de conta (ex.: 10.000 req/s no API Gateway) |
+| S3 (vídeos), API Gateway, SQS, DynamoDB | Gerenciados pela AWS, sem configuração de capacidade | Limites de conta (ex.: 10.000 req/s no API Gateway) |
 | Lambdas `register`, `login`, `authorizer`, `notification` | Concorrência automática | Concorrência reservada na `notification` para não estourar o provedor SMTP (Brevo gratuito: 300 e-mails/dia) |
 | `video-api-web` | HPA por CPU (70%), 2 a 6 réplicas | PDB com `minAvailable: 1` |
 | `video-api-saga-consumer` | KEDA pelas filas `video-uploaded` e `saga-replies.fifo`, 1 a 5 réplicas | A FIFO garante ordem por `saga_id` mesmo com várias réplicas |
 | `video-api-outbox-relay` | 1 a 2 réplicas | `SELECT ... FOR UPDATE SKIP LOCKED` evita publicação dupla entre réplicas |
 | `video-processor` | KEDA `aws-sqs-queue`, 1 a 10 réplicas | `emptyDir` de 10Gi por pod; o managed node group (on-demand `t3.large`) vai de 2 a 4 nós, teto de 8 vCPUs dentro do limite do lab ([ADR-019](../04-adrs/ADR-019-deploy-na-aws-academy-learner-lab.md)) |
-| Aurora MySQL | Serverless v2, de 0,5 a 2 ACU, uma instância (o lab não tem Multi-AZ); alternativa `db.t4g.medium` se o lab recusar `db.serverless` | Leituras e escritas são curtas; o arquivo nunca passa pelo banco |
+| Aurora MySQL | Provisionado `db.t3.medium`, uma instância (o lab nega `db.serverless` e não tem Multi-AZ, [ADR-019](../04-adrs/ADR-019-deploy-na-aws-academy-learner-lab.md)); numa conta própria, `aurora_instance_class = "db.serverless"` volta ao Serverless v2 | Leituras e escritas são curtas; o arquivo nunca passa pelo banco |
 
 ```mermaid
 flowchart LR
