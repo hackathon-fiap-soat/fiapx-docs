@@ -107,8 +107,8 @@ orquestrador no `fiapx-infra` ([ADR-018](../04-adrs/ADR-018-orquestracao-do-depl
 
 | Workflow | Confirmação | O que faz |
 |---|---|---|
-| `deploy-all.yml` | `deploy-prod` (só no disparo manual) | `apply` da infra e `create-databases.sql`, depois chama o `deploy.yml` de cada repositório na ordem e roda o smoke test ponta a ponta. Input opcional `a_partir_de` para retomar uma subida interrompida. **Também roda sozinho**, a partir da notification, depois de todo `apply` com sucesso do `terraform.yml` na `main` (merge no `fiapx-infra`) |
-| `destroy-all.yml` | `destroy-prod` | Chama o `destroy.yml` de cada repositório na ordem inversa e destrói a infra por último |
+| `deploy-all.yml` | `deploy-prod` (só no disparo manual) | `apply` da infra e `create-databases.sql`, depois chama o `deploy.yml` de cada repositório na ordem e roda o smoke test ponta a ponta; por fim aplica a stack do New Relic (dashboards, alertas e Synthetics, ADR-021). Input opcional `a_partir_de` para retomar uma subida interrompida. **Também roda sozinho**, a partir da notification, depois de todo `apply` com sucesso do `terraform.yml` na `main` (merge no `fiapx-infra`) |
+| `destroy-all.yml` | `destroy-prod` | Destrói a stack do New Relic, chama o `destroy.yml` de cada repositório na ordem inversa e destrói a infra por último |
 
 Na aba Actions eles aparecem como `Deploy-all · sobe o ambiente prod inteiro` e
 `Destroy-all · derruba o ambiente prod inteiro`. Os jobs são numerados pela ordem:

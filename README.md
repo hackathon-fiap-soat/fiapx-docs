@@ -40,7 +40,7 @@ A documentação vem antes do código: os outros repositórios implementam o que
 
 ### 4. Decisões
 
-- [ADRs](04-adrs/README.md) (20 decisões)
+- [ADRs](04-adrs/README.md) (21 decisões)
 - [RFCs](05-rfcs/README.md) (10 comparações de alternativas)
 
 ### 5. Deploy e operação
@@ -48,8 +48,8 @@ A documentação vem antes do código: os outros repositórios implementam o que
 - [Fluxo de deploy](06-deploy/fluxo-de-deploy.md): pipelines, ordem entre repositórios e rollback
 - [Ambientes](06-deploy/ambientes.md): local e produção, custos e destroy
 - [Parâmetros SSM e segredos](06-deploy/parametros-ssm.md): chaves que ligam os repositórios
-- [Observabilidade](07-observabilidade/observabilidade.md) e
-  [dashboard do New Relic](07-observabilidade/newrelic-dashboard.json)
+- [Observabilidade](07-observabilidade/observabilidade.md); dashboards, alertas e Synthetics do New Relic
+  como código em [`fiapx-infra/observability/newrelic`](https://github.com/hackathon-fiap-soat/fiapx-infra/tree/main/observability/newrelic) (ADR-021)
 - [Teste de carga (k6)](tests/load/README.md): 30 vídeos em 1 minuto, KEDA escalando e evidências da Etapa 10
 
 ### 6. Contratos

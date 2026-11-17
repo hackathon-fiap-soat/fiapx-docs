@@ -102,7 +102,7 @@ Fonte da verdade da arquitetura. Não tem código de aplicação.
 | `01-contexto/` | visão geral, linguagem ubíqua, mapa de contextos |
 | `02-domain-storytelling/` | DS-01 a DS-06 |
 | `03-arquitetura/` | C4, sequências, SAGA, modelo de dados, segurança, escalabilidade |
-| `04-adrs/` | ADR-001 a ADR-020 (índice em `04-adrs/README.md`) |
+| `04-adrs/` | ADR-001 a ADR-021 (índice em `04-adrs/README.md`) |
 | `05-rfcs/` | RFC-001 a RFC-010 |
 | `06-deploy/` | fluxo de deploy, ambientes, parâmetros SSM |
 | `07-observabilidade/` | New Relic, dashboard e alertas |

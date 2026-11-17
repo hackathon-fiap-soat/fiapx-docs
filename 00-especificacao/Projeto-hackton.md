@@ -425,8 +425,7 @@ fiapx-docs/
 │   ├── fluxo-de-deploy.md             # pipelines, ordem entre repos, rollback
 │   └── ambientes.md                   # local (compose + LocalStack) e prod (AWS), custos e destroy
 ├── 07-observabilidade/
-│   ├── observabilidade.md
-│   └── newrelic-dashboard.json
+│   └── observabilidade.md             # dashboards e alertas como código no fiapx-infra (ADR-021)
 ├── contracts/                         # JSON Schema de cada mensagem (§7.3)
 ├── api/openapi.yaml                   # OpenAPI consolidado (auth + video-api)
 └── entrega/
@@ -474,7 +473,8 @@ Frames, Pacote zip, Link de download, E-mail.
 | 017 | Recuperação e troca de senha no `fiapx-auth`, com e-mail pelo `fiapx-notification` |
 | 018 | Orquestração do deploy no GitHub Actions: `deploy-all.yml` e `destroy-all.yml` no `fiapx-infra`, chamando o `deploy.yml` reutilizável de cada repositório |
 | 019 | Deploy na AWS Academy Learner Lab: credenciais do lab em GitHub Secrets, `LabRole`, SMTP externo e site no EKS atrás do mesmo API Gateway (substitui o ADR-015 e partes dos ADRs 002, 005, 009–014 e 016) |
-| 020 | E-mail pelo OCI Email Delivery no lugar do OCI Email Delivery (provedor SMTP do ADR-019) |
+| 020 | E-mail pelo OCI Email Delivery no lugar do Brevo (provedor SMTP do ADR-019) |
+| 021 | Dashboards, alertas e Synthetics do New Relic como código (Terraform no `fiapx-infra/observability/newrelic`), com o ciclo de vida do ambiente |
 
 **RFCs obrigatórias** (`05-rfcs/RFC-NNN-titulo.md`, cada uma com alternativas comparadas em tabela):
 
@@ -926,15 +926,23 @@ Node em `migrations/*.sql`. Também deve exportar um `schema.sql` consolidado pa
 | Lambdas | layer com a extensão do New Relic para Node.js (license key, sem integração da conta AWS) + logs JSON |
 | SQS / DLQs / Aurora / API Gateway | **CloudWatch** (métricas nativas) com alarmes num tópico SNS com e-mail do time. Sem CloudWatch Metric Streams nem integração da conta AWS no New Relic: o lab não cria as roles (ADR-019) |
 
-**Eventos customizados:** `VideoSagaTransition` (de, para, passo, duração) e `VideoProcessed` (duração,
-frames, tamanho).
+**Eventos customizados:** `VideoSagaTransition` (de, para, passo, duração), `VideoProcessed` (duração,
+frames, tamanho) e `SagaTimeoutCheck` (sagas vencidas). O CronJob `schedule:run` envia pelo daemon
+compartilhado `newrelic-php-daemon` (processo curto demais para o daemon local).
 
-**Dashboard** (`fiapx-docs/07-observabilidade/newrelic-dashboard.json`): vídeos por status (hoje),
+**Dashboards, alertas e Synthetics como código** (ADR-021): Terraform em `fiapx-infra/observability/newrelic`,
+aplicado pelo `deploy-all` depois do smoke e destruído pelo `destroy-all`.
+
+**Dashboard "FIAP X — Processamento de vídeos"**: vídeos por status (hoje),
 throughput de uploads, tempo de processamento p50/p95, taxa de falha, réplicas do worker ao longo do tempo,
 latência e erros do `video-api`, invocações e erros das Lambdas, sagas presas (`PROCESSING` com deadline
-vencido). Profundidade das filas e das DLQs, Aurora e API Gateway: console do CloudWatch.
+vencido). **Dashboard "FIAP X — Kubernetes (EKS)"**: nós, pods, réplicas, CPU e memória por container e
+eventos do cluster. Profundidade das filas e das DLQs, Aurora e API Gateway: console do CloudWatch.
 
-**Alertas:** no New Relic, taxa de falha > 10% em 15 min, erro 5xx no `video-api` > 2% e sagas vencidas > 0;
+**Synthetics:** monitor simples em `/api/health/ready` a cada 5 minutos, enquanto o ambiente existe.
+
+**Alertas:** no New Relic, taxa de falha > 10% em 15 min, erro 5xx no `video-api` > 2%, sagas vencidas > 0,
+pod pendente por 10 min, erro na Lambda de notificação e falha do Synthetics;
 no CloudWatch (SNS por e-mail), mensagem em DLQ > 0, fila `processing-commands` com mais de 50 mensagens
 por 10 min e erro 5xx no API Gateway > 2%.
 
@@ -1043,7 +1051,7 @@ e `destroy-all` no fim. Infraestrutura nova é conferida antes contra as
 ### Etapa 1 — Documentação (fiapx-docs) 🛑
 
 - Escrever **tudo** do §8.1: visão geral, linguagem ubíqua, 6 Domain Storytellings, C4 (contexto,
-  containers, componentes), sequências, SAGA, modelo de dados, segurança, escalabilidade, **20 ADRs**,
+  containers, componentes), sequências, SAGA, modelo de dados, segurança, escalabilidade, **21 ADRs**,
   **10 RFCs**, fluxo de deploy, ambientes, observabilidade, JSON Schemas dos contratos, OpenAPI, roteiro do
   vídeo e rascunho do documento de entrega.
 - **DoD:** lint verde e diagramas Mermaid renderizando. **Parar e pedir revisão do time** antes de escrever
@@ -1127,7 +1135,8 @@ e `destroy-all` no fim. Infraestrutura nova é conferida antes contra as
 
 ### Etapa 9 — Observabilidade
 
-- New Relic no cluster, nas imagens e nas Lambdas; eventos customizados; dashboard e alertas importados.
+- New Relic no cluster, nas imagens e nas Lambdas; eventos customizados; dashboards, alertas e Synthetics
+  pelo Terraform (ADR-021).
   Alarmes do CloudWatch (DLQs, fila `processing-commands`, 5xx do API Gateway) com SNS por e-mail.
 - **DoD:** dashboard com dados reais de um processamento na AWS.
 
@@ -1174,7 +1183,7 @@ e `destroy-all` no fim. Infraestrutura nova é conferida antes contra as
 
 - [ ] Domain Storytelling (6 histórias)
 - [ ] C4 (contexto, containers, componentes) e diagramas de sequência
-- [ ] 20 ADRs e 10 RFCs
+- [ ] 21 ADRs e 10 RFCs
 - [ ] Imagens PNG/SVG de todos os diagramas (`fiapx-docs/diagramas/`, por assunto)
 - [ ] SAGA documentada (passos, estados, compensações)
 - [ ] Fluxo de deploy e ambientes
