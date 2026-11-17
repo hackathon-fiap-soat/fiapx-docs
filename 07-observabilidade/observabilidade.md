@@ -1,9 +1,10 @@
 # Observabilidade
 
 Como o FIAP X é observado: no New Relic, a instrumentação de cada camada, o padrão de logs, os eventos
-customizados da SAGA, o dashboard e os alertas; no CloudWatch, as métricas e os alarmes dos serviços
-gerenciados. Fonte: `Projeto-hackton.md` §10, ADR-011 / RFC-010 e
-[ADR-019](../04-adrs/ADR-019-deploy-na-aws-academy-learner-lab.md).
+customizados da SAGA, os dashboards, os alertas e o Synthetics; no CloudWatch, as métricas e os alarmes dos serviços
+gerenciados. Fonte: `Projeto-hackton.md` §10, ADR-011 / RFC-010,
+[ADR-019](../04-adrs/ADR-019-deploy-na-aws-academy-learner-lab.md) e
+[ADR-021](../04-adrs/ADR-021-observabilidade-como-codigo-no-new-relic.md).
 
 Na AWS Academy Learner Lab não é possível criar a role do CloudWatch Metric Streams nem a da integração da
 conta AWS no New Relic (ADR-019). Por isso o New Relic fica com APM, Kubernetes, logs e Lambdas, e as
@@ -33,8 +34,11 @@ flowchart LR
   API & PROC -- APM, eventos customizados e logs --> NR[New Relic]
   NRI -- K8s*Sample e logs --> NR
   AUTH & NOTIF -- extensão New Relic: invocações, traces e logs --> NR
-  NR --> DASH[Dashboard FIAP X]
-  NR --> ALERT[Alertas NRQL]
+  SYN[Synthetics<br/>health a cada 5 min] -- GET /api/health/ready --> GW
+  SYN -- SyntheticCheck --> NR
+  NR --> DASH[Dashboards FIAP X]
+  NR --> ALERT[Alertas NRQL<br/>e-mail do time]
+  TF[Terraform<br/>observability/newrelic] -. cria .-> DASH & ALERT & SYN
 ```
 
 Atributo comum para seguir um vídeo de ponta a ponta: `video_id`, junto com `saga_id` e `correlation_id`
@@ -47,6 +51,7 @@ Atributo comum para seguir um vídeo de ponta a ponta: `video_id`, junto com `sa
 | EKS | Helm `nri-bundle` (infraestrutura, kube-state-metrics, eventos do Kubernetes, logs dos pods) | `fiapx-infra/modules/eks-addons` | `K8sClusterSample`, `K8sNodeSample`, `K8sPodSample`, `K8sDeploymentSample`, `K8sHpaSample`, `InfrastructureEvent`, `Log` |
 | video-api e video-processor | Agente New Relic PHP na imagem Docker; logs JSON (Monolog `JsonFormatter`) no stdout | Dockerfile e `config/logging.php` de cada repositório | `Transaction`, `TransactionError`, `Span`, eventos customizados, `Log` (logs in context) |
 | Lambdas (auth e notification) | Layer `NewRelicNodeJS24XARM64` (versão fixa) com a extensão e o agente Node.js; o handler vira `newrelic-lambda-wrapper.handler` e o original fica em `NEW_RELIC_LAMBDA_HANDLER`. A extensão lê a license key do segredo `fiapx/<env>/<repo>/newrelic` e envia direto, sem integração da conta AWS. Logs JSON no stdout | `infra/newrelic.tf` de cada repositório | `AwsLambdaInvocation`, `AwsLambdaInvocationError`, `Span`, `Log` |
+| Disponibilidade externa | Monitor simples do New Relic Synthetics em `/api/health/ready`, a cada 5 minutos | `fiapx-infra/observability/newrelic` (só com o ambiente no ar) | `SyntheticCheck` |
 | SQS, DLQs, Aurora, API Gateway, S3, DynamoDB | Métricas nativas do CloudWatch e alarmes com SNS (não chegam ao New Relic) | `fiapx-infra` e `fiapx-notification` (Terraform) | nada; ver [CloudWatch](#serviços-gerenciados-no-cloudwatch) |
 
 Nomes das aplicações no APM (`newrelic.appname` / `NEW_RELIC_APP_NAME`): `fiapx-video-api`,
@@ -54,9 +59,17 @@ Nomes das aplicações no APM (`newrelic.appname` / `NEW_RELIC_APP_NAME`): `fiap
 injetada como variável de ambiente; nunca vai para o repositório.
 
 Os processos de linha de comando do `video-api` (`outbox:relay`, `saga:consume`, `schedule:run`) e o
-`processor:consume` também rodam com o agente PHP. Por serem processos longos (ou, no caso do CronJob,
-curtos), cada mensagem processada é registrada como transação *background* (`newrelic_start_transaction` /
-`newrelic_end_transaction`), com o nome do tipo da mensagem (ex.: `SagaConsumer/VideoProcessed`).
+`processor:consume` também rodam com o agente PHP:
+
+- **Processos que não terminam** (`saga:consume`, `processor:consume`, `outbox:relay`): o agente só envia uma
+  transação (e os eventos customizados dela) quando ela termina. Por isso cada mensagem processada vira uma
+  transação *background* (`newrelic_start_transaction` / `newrelic_end_transaction`) com o nome do tipo da
+  mensagem (ex.: `SagaConsumer/VideoProcessed`); no `outbox:relay`, cada ciclo que publicou algo
+  (`OutboxRelay/publish`).
+- **Processos curtos** (o CronJob `schedule:run`, a cada minuto): o daemon local do pod morreria antes de
+  conectar e enviar. Eles usam o **daemon compartilhado** `newrelic-php-daemon` (Deployment + Service no
+  namespace `fiapx`, imagem `newrelic/php-daemon`), com `NEW_RELIC_DAEMON_ADDRESS=newrelic-php-daemon:31339`
+  e `newrelic.daemon.app_connect_timeout` para a primeira transação esperar a conexão do app.
 
 ## Padrão de logs
 
@@ -174,23 +187,24 @@ O New Relic não consulta o Aurora, então "sagas presas" é medido pelo própri
 Se `overdue_count` continua acima de zero minuto após minuto, a compensação não está andando (relay parado,
 fila travada ou erro no consumidor).
 
-## Dashboard
+## Dashboards
 
-Arquivo importável: [`newrelic-dashboard.json`](newrelic-dashboard.json) (formato de export do New Relic, duas
-páginas). Filas, DLQs, Aurora e API Gateway não estão nele: ficam no CloudWatch. Todas as consultas estão com `accountIds: [0]`, um placeholder. Antes de importar, troque pelo id
-da conta:
+Os dashboards, os alertas e o monitor Synthetics são criados pelo Terraform (ADR-021), na stack
+[`fiapx-infra/observability/newrelic`](https://github.com/hackathon-fiap-soat/fiapx-infra/tree/main/observability/newrelic), aplicada pelo `deploy-all` depois do smoke e destruída
+pelo `destroy-all`. Os dashboards ficam em JSON no formato de export do New Relic
+(`dashboards/*.json.tftpl`, com o id da conta como variável): mudar um widget é mudar o JSON e abrir PR.
 
-```bash
-jq --argjson id 1234567 'walk(if type == "object" and has("accountIds") then .accountIds = [$id] else . end)' \
-  07-observabilidade/newrelic-dashboard.json > /tmp/dashboard.json
-```
+| Dashboard | Páginas | Para quê |
+|---|---|---|
+| **FIAP X — Processamento de vídeos** | "Processamento" e "Worker, API e Lambdas" | Saúde da SAGA, tempo de processamento, falhas, worker, `video-api` e Lambdas |
+| **FIAP X — Kubernetes (EKS)** | "Cluster fiapx-prod" | Nós, pods, réplicas (KEDA), CPU e memória por container e eventos do cluster |
 
-Depois, no New Relic: **Dashboards → Import dashboard** e cole o conteúdo de `/tmp/dashboard.json`.
-Os nomes das filas e do cluster assumem o ambiente `prod` (`fiapx-prod-*`).
+Filas, DLQs, Aurora e API Gateway não estão neles: ficam no CloudWatch. Os nomes do cluster e das funções
+assumem o ambiente `prod` (`fiapx-prod*`).
 
 ## Consultas dos widgets
 
-As consultas abaixo são as mesmas do JSON do dashboard.
+As consultas abaixo são as mesmas dos JSON dos dashboards.
 
 ### Página "Processamento"
 
@@ -272,8 +286,32 @@ SELECT percentage(count(*), WHERE http.statusCode >= 500) AS '5xx (%)' FROM Tran
 **Lambdas — invocações e erros** (`viz.table`)
 
 ```sql
-SELECT count(*) AS 'Invocações', filter(count(*), WHERE error IS true) AS 'Erros', average(duration) * 1000 AS 'Duração média (ms)' FROM AwsLambdaInvocation WHERE entityName LIKE 'fiapx-prod-%' FACET entityName SINCE 1 day ago
+SELECT count(*) AS 'Invocações', filter(count(*), WHERE error IS true) AS 'Erros', average(duration) * 1000 AS 'Duração média (ms)' FROM AwsLambdaInvocation WHERE aws.lambda.arn LIKE '%:function:fiapx-prod-%' FACET name SINCE 1 day ago
 ```
+
+Sem a integração da conta AWS, os eventos das Lambdas não têm `entityName`: o filtro usa `aws.lambda.arn` e o
+facet usa `name` (`WebTransaction/Function/<função>` ou `OtherTransaction/Function/<função>`).
+
+### Dashboard "FIAP X — Kubernetes (EKS)"
+
+Todas as consultas filtram `clusterName = 'fiapx-prod'` e, onde indicado, `namespaceName = 'fiapx'`.
+
+| Widget | Visualização | Consulta (resumida) |
+|---|---|---|
+| Nós | `viz.billboard` | `SELECT uniqueCount(nodeName) FROM K8sNodeSample` |
+| Pods rodando (fiapx) | `viz.billboard` | `SELECT uniqueCount(podName) FROM K8sPodSample WHERE status = 'Running'` |
+| Pods pendentes | `viz.billboard` | `SELECT uniqueCount(podName) FROM K8sPodSample WHERE status = 'Pending' AND createdKind != 'Job'` |
+| Restarts de container (1 h) | `viz.billboard` | `SELECT sum(restartCountDelta) FROM K8sContainerSample` |
+| CPU e memória dos nós (%) | `viz.line` | `SELECT average(allocatableCpuCoresUtilization)` / `average(allocatableMemoryUtilization) FROM K8sNodeSample FACET nodeName` |
+| Réplicas por deployment | `viz.line` | `SELECT latest(podsAvailable) FROM K8sDeploymentSample FACET deploymentName` |
+| Worker (KEDA): desejados x disponíveis | `viz.line` | `SELECT latest(podsDesired), latest(podsAvailable) FROM K8sDeploymentSample WHERE deploymentName = 'video-processor'` |
+| CPU e memória por container | `viz.line` | `SELECT average(cpuUsedCores)` / `average(memoryWorkingSetBytes) / 1e6 FROM K8sContainerSample FACET containerName` |
+| Pods da aplicação | `viz.table` | `SELECT latest(status), latest(nodeName) FROM K8sPodSample FACET podName, deploymentName` |
+| Containers: uso x reserva | `viz.table` | `SELECT average(cpuUsedCores), latest(cpuRequestedCores), average(memoryWorkingSetBytes)/1e6, latest(memoryLimitBytes)/1e6, sum(restartCountDelta) FROM K8sContainerSample FACET podName, containerName` |
+| Eventos do Kubernetes | `viz.table` | ``SELECT `event.involvedObject.name`, `event.reason`, `event.message` FROM InfrastructureEvent WHERE category = 'kubernetes' AND `event.reason` IS NOT NULL`` |
+
+Atributos com ponto no nome (`event.reason`) precisam de crase no NRQL; sem o filtro `IS NOT NULL`, entram
+as linhas de mudança de inventário, que não têm os campos do evento.
 
 ## Alertas
 
@@ -282,17 +320,24 @@ customizados) e os alarmes do CloudWatch sobre os serviços gerenciados.
 
 ### New Relic
 
-Condições NRQL (New Relic Alerts), todas na política **FIAP X — prod**, com notificação por e-mail para o
-time. Agregação por janela deslizante quando indicado.
+Condições NRQL na política **FIAP X — prod**, criadas pelo Terraform (ADR-021). Toda condição abre um
+*issue* que o *workflow* "FIAP X — e-mail do time" envia aos endereços do Secret `ALERT_EMAILS` (os mesmos do
+SNS do CloudWatch).
 
 | Alerta | Condição NRQL | Threshold (crítico) | Ação esperada |
 |---|---|---|---|
 | Taxa de falha de processamento | `SELECT percentage(count(*), WHERE to_state = 'COMPENSATED') FROM VideoSagaTransition WHERE to_state IN ('COMPLETED', 'COMPENSATED')` | `> 10` (%) com janela de 15 minutos | Ver "Motivos de falha" e os logs do `fiapx-video-processor` |
 | Erros 5xx no video-api | `SELECT percentage(count(*), WHERE http.statusCode >= 500) FROM Transaction WHERE appName = 'fiapx-video-api' AND transactionType = 'Web'` | `> 2` (%) por 5 minutos | Ver `TransactionError` e logs do `video-api` |
-| Sagas vencidas | `SELECT max(overdue_count) FROM SagaTimeoutCheck` | `> 0` por 5 minutos | Conferir `outbox-relay`, `saga-consumer` e CronJob |
+| Sagas vencidas | `SELECT max(overdue_count) FROM SagaTimeoutCheck` | `> 0` por 5 minutos; *loss of signal* em 10 minutos | Conferir `outbox-relay`, `saga-consumer` e CronJob (sem sinal: o CronJob parou ou o daemon compartilhado caiu) |
+| Pod pendente | `SELECT uniqueCount(podName) FROM K8sPodSample WHERE clusterName = 'fiapx-prod' AND status = 'Pending' AND createdKind != 'Job'` | `> 0` por 10 minutos | Falta de CPU ou memória nos nós (ver "Eventos do Kubernetes"); rajadas curtas do KEDA não disparam |
+| Falha no envio de e-mail | `SELECT count(*) FROM AwsLambdaInvocationError WHERE aws.lambda.arn LIKE '%:function:fiapx-prod-notification'` | `> 0` em 5 minutos | Logs da Lambda `fiapx-prod-notification`, credenciais SMTP e itens `FAILED` no DynamoDB |
+| API fora do ar (Synthetics) | `SELECT count(*) FROM SyntheticCheck WHERE monitorName = 'FIAP X — health (prod)' AND result = 'FAILED'` | `> 0` em 10 minutos | Conferir o API Gateway, o ALB e os pods do `video-api` |
 
-Recomendação complementar: ligar *loss of signal* (5 minutos) na condição "Sagas vencidas", para avisar se o
-CronJob `schedule:run` parar de rodar.
+### Synthetics
+
+Monitor **simples** (ping HTTP) "FIAP X — health (prod)" em `GET <API>/api/health/ready`, a cada 5 minutos, de
+`US_EAST_1`. O endereço vem do SSM (`/fiapx/prod/apigw/url`) e muda a cada sessão do lab; por isso o
+monitor é criado pelo `deploy-all` e removido pelo `destroy-all`, sem alarme falso com o ambiente desligado.
 
 ### CloudWatch
 

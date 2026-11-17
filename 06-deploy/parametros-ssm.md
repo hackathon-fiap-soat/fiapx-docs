@@ -74,5 +74,7 @@ repositórios são públicos.
 | `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_SESSION_TOKEN` | organização `hackathon-fiap-soat` (ou cada repositório, sem acesso de admin) | credenciais da sessão da AWS Academy Learner Lab, atualizadas a cada sessão (~4 h) |
 | `SMTP_USER`, `SMTP_PASSWORD`, `SMTP_FROM` | `fiapx-notification` e `fiapx-infra` (o `deploy-all` repassa com `secrets: inherit`) | credenciais do provedor SMTP (OCI Email Delivery) e remetente aprovado; o Terraform grava em `fiapx/<env>/notification/smtp` |
 | `NEW_RELIC_LICENSE_KEY` | repositórios que fazem deploy | license key (ingest) do New Relic: `nri-bundle` no cluster (`fiapx-infra`), agente PHP (Secret do Kubernetes no video-api e no processor) e segredo da extensão das Lambdas (auth e notification). Vazio = sem New Relic |
-| `NEW_RELIC_ACCOUNT_ID` | `fiapx-auth`, `fiapx-notification` (e `fiapx-infra`, que repassa) | id da conta do New Relic, exigido pela extensão das Lambdas |
+| `NEW_RELIC_ACCOUNT_ID` | `fiapx-auth`, `fiapx-notification` (e `fiapx-infra`, que repassa e usa na stack do New Relic) | id da conta do New Relic, exigido pela extensão das Lambdas e pelo provider Terraform do New Relic |
+| `NEW_RELIC_API_KEY` | `fiapx-infra` | **User key** do New Relic (não é a license key): o provider Terraform cria dashboards, alertas e Synthetics (ADR-021) |
+| `ALERT_EMAILS` | `fiapx-infra` | lista JSON de e-mails do time (ex.: `["a@exemplo.com"]`): assinaturas do SNS dos alarmes do CloudWatch e destino de e-mail dos alertas do New Relic. Variável `sensitive` |
 | `SONAR_TOKEN` | repositórios com código | token do SonarCloud para a análise no CI (Etapa 8) |
